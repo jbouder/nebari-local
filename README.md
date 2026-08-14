@@ -148,22 +148,35 @@ after a cluster recreate**:
    (The service name is the gateway's generated Envoy service — check with
    `kubectl get svc -n envoy-gateway-system`.)
 
-2. **CA-bundle ConfigMaps** — backends must trust the gateway's self-signed
-   cert. Build a bundle (system roots + live gateway cert, so real outbound
-   TLS keeps working) and create it in each consuming namespace:
+2. **CA-bundle ConfigMaps** — backends must trust the gateway certs. All
+   gateway certs chain to the 10-year `nebari-local Root CA`
+   (`gitops/manifests/security/issuers/root-ca.yaml`; the `selfsigned-issuer`
+   ClusterIssuer is a CA issuer backed by it). Build a bundle (system roots +
+   root CA, so real outbound TLS keeps working) and create it in each
+   consuming namespace — the bundle stays valid across leaf renewals:
    ```bash
-   echo | openssl s_client -connect 127.0.0.1:443 -servername keycloak.nebari.local 2>/dev/null | \
-     openssl x509 -outform PEM > /tmp/gateway.crt
-   cat /etc/ssl/cert.pem /tmp/gateway.crt > /tmp/ca-bundle.crt
+   kubectl --context kind-nebari-local -n cert-manager get secret nebari-local-root-ca \
+     -o jsonpath='{.data.ca\.crt}' | base64 -d > /tmp/nebari-local-root-ca.pem
+   cat /etc/ssl/cert.pem /tmp/nebari-local-root-ca.pem > /tmp/ca-bundle.crt
    for ns in nebi nebari-chat frames; do
-     kubectl --context kind-nebari-local delete configmap nebari-local-ca-bundle -n $ns --ignore-not-found
-     kubectl --context kind-nebari-local create configmap nebari-local-ca-bundle -n $ns \
-       --from-file=ca-bundle.crt=/tmp/ca-bundle.crt
+     kubectl --context kind-nebari-local -n $ns create configmap nebari-local-ca-bundle \
+       --from-file=ca-bundle.crt=/tmp/ca-bundle.crt --dry-run=client -o yaml | \
+       kubectl --context kind-nebari-local apply --server-side --force-conflicts -f -
    done
    ```
-   Also re-run this if cert-manager rotates the gateway cert (~1 year).
-   The pack manifests reference the ConfigMap via `orgCABundle` (nebi) and
-   `ravnar.extraEnv/extraVolumes` (chat).
+   (Server-side apply because the bundle is too large for the client-side
+   last-applied annotation.) The pack manifests reference the ConfigMap via
+   `orgCABundle` (nebi) and `ravnar.extraEnv/extraVolumes` (chat).
+
+   **Workstation trust (apollo-desktop, browsers, curl):** trust the same
+   root CA once in the macOS System keychain — needs a real terminal for the
+   sudo password prompt:
+   ```bash
+   sudo security add-trusted-cert -d -r trustRoot \
+     -k /Library/Keychains/System.keychain /tmp/nebari-local-root-ca.pem
+   ```
+   Re-run both steps only after a cluster recreate (the root CA is minted
+   fresh). Leaf renewals need nothing.
 
 3. **Harbor admin password secret** — Harbor's own admin account and the
    OIDC-setup Job both read one out-of-band secret (never committed):
