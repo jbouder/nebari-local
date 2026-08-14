@@ -37,6 +37,7 @@ NIC-owned apps; `nebari-apps` allows any source repo and any namespace:
 | Provenance Collector | https://provenance.nebari.local | Daily scan at 06:00; http persistence mode |
 | Apps | https://apps.nebari.local | Launch static/pixi web apps (UI + API + MCP at /mcp); apps serve at `<name>.apps.nebari.local` |
 | Harbor | https://harbor.nebari.local | OCI registry + Trivy scanning; "LOGIN VIA OIDC PROVIDER" (Keycloak) or `admin` with the harbor-admin secret |
+| Frames | https://frames.nebari.local | Context Frames registry + remote MCP endpoint (vendored chart at `gitops/charts/nebari-frames` — local CA addition) |
 
 Local-cluster conventions used in these manifests: backend OIDC calls go to
 the in-cluster Keycloak service
@@ -77,11 +78,6 @@ amd64 binaries either way):
    - `ghcr.io/nebari-dev/provenance-collector-pack/frontend:0.1.2`
      (`sha256:08c87115afef393f498220b8fe43c338a511798d6183527cfce9acbf3d92f9b9`)
 
-**Chat:** the deployed chat is `nebari-dev/chat-pack` (public images,
-multi-arch). The OpenTeams Chat++ pack was considered first but its chart
-and image on `quay.io/openteams` are private and would need a quay pull
-token wired into an ArgoCD repository secret plus an imagePullSecret.
-
 ### In-cluster access to `*.nebari.local` (required for pack OIDC)
 
 Keycloak pins its token issuer to `https://keycloak.nebari.local`, and pack
@@ -110,7 +106,7 @@ after a cluster recreate**:
    echo | openssl s_client -connect 127.0.0.1:443 -servername keycloak.nebari.local 2>/dev/null | \
      openssl x509 -outform PEM > /tmp/gateway.crt
    cat /etc/ssl/cert.pem /tmp/gateway.crt > /tmp/ca-bundle.crt
-   for ns in nebi nebari-chat; do
+   for ns in nebi nebari-chat frames; do
      kubectl --context kind-nebari-local delete configmap nebari-local-ca-bundle -n $ns --ignore-not-found
      kubectl --context kind-nebari-local create configmap nebari-local-ca-bundle -n $ns \
        --from-file=ca-bundle.crt=/tmp/ca-bundle.crt
@@ -163,7 +159,7 @@ hostname to localhost.
 new names appended whenever a pack is added):
 
 ```bash
-sudo sh -c 'echo "127.0.0.1 nebari.local argocd.nebari.local keycloak.nebari.local hub.nebari.local nebi.nebari.local chat.nebari.local chat-api.nebari.local provenance.nebari.local apps.nebari.local harbor.nebari.local" >> /etc/hosts'
+sudo sh -c 'echo "127.0.0.1 nebari.local argocd.nebari.local keycloak.nebari.local hub.nebari.local nebi.nebari.local chat.nebari.local chat-api.nebari.local provenance.nebari.local apps.nebari.local harbor.nebari.local frames.nebari.local" >> /etc/hosts'
 ```
 
 > `/etc/hosts` has no wildcard support, so every app launched through the

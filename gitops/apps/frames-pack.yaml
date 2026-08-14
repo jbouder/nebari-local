@@ -1,0 +1,62 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: frames-pack
+  namespace: argocd
+  labels:
+    app.kubernetes.io/part-of: nebari-packs
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: nebari-apps
+
+  # Vendored copy of the upstream nebari-frames chart 0.1.5 (from
+  # https://nebari-dev.github.io/helm-repository) with one local addition:
+  # orgCABundle support, because the backend fails fast fetching OIDC
+  # discovery from https://keycloak.nebari.local and the upstream chart has
+  # no way to inject the gateway CA. Drop the vendored copy once upstream
+  # grows extraEnv/extraVolumes or a CA option.
+  source:
+    repoURL: file:///Users/johnnybouder/repos/nebari-local
+    targetRevision: main
+    path: gitops/charts/nebari-frames
+    helm:
+      releaseName: frames
+      values: |
+        image:
+          # amd64-only image pinned by digest for the arm64 kind node (Rosetta)
+          tag: "v0.1.5@sha256:7a149237b1a5651595554f1160cb60938a62bcf54b82303a2cb45493d02047ec"
+
+        nebariapp:
+          enabled: true
+          hostname: frames.nebari.local
+
+        seed:
+          orgSlug: nebari-local
+          orgDisplayName: "Nebari Local"
+          adminEmail: jbouder@openteams.com
+
+        orgCABundle:
+          configMapName: nebari-local-ca-bundle
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: frames
+
+  syncPolicy:
+    managedNamespaceMetadata:
+      labels:
+        nebari.dev/managed: "true"
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
