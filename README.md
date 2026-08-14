@@ -35,6 +35,7 @@ NIC-owned apps; `nebari-apps` allows any source repo and any namespace:
 | Nebi | https://nebi.nebari.local | pixi environment management |
 | Nebari Chat | https://chat.nebari.local | nebari-dev/chat-pack (frontend + ravnar backend) |
 | Provenance Collector | https://provenance.nebari.local | Daily scan at 06:00; http persistence mode |
+| Apps | https://apps.nebari.local | Launch static/pixi web apps (UI + API + MCP at /mcp); apps serve at `<name>.apps.nebari.local` |
 
 Local-cluster conventions used in these manifests: backend OIDC calls go to
 the in-cluster Keycloak service
@@ -153,8 +154,12 @@ hostname to localhost.
 new names appended whenever a pack is added):
 
 ```bash
-sudo sh -c 'echo "127.0.0.1 nebari.local argocd.nebari.local keycloak.nebari.local hub.nebari.local nebi.nebari.local chat.nebari.local chat-api.nebari.local provenance.nebari.local" >> /etc/hosts'
+sudo sh -c 'echo "127.0.0.1 nebari.local argocd.nebari.local keycloak.nebari.local hub.nebari.local nebi.nebari.local chat.nebari.local chat-api.nebari.local provenance.nebari.local apps.nebari.local" >> /etc/hosts'
 ```
+
+> `/etc/hosts` has no wildcard support, so every app launched through the
+> Apps pack needs its own entry appended too
+> (`127.0.0.1 <name>.apps.nebari.local`).
 
 **Start the gateway forward** (must stay running; needs sudo to bind 443):
 

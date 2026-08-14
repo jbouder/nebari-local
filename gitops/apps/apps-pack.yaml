@@ -1,0 +1,72 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: apps-pack
+  namespace: argocd
+  labels:
+    app.kubernetes.io/part-of: nebari-packs
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: nebari-apps
+
+  source:
+    repoURL: https://github.com/nebari-dev/apps-pack.git
+    targetRevision: main
+    path: charts/nebari-apps
+    helm:
+      releaseName: nebari-apps
+      values: |
+        clusterDomain: nebari.local
+        gateway: public
+        tls:
+          enabled: true
+
+        # The chart defaults image tags to appVersion (0.1.0), which is not
+        # published on ghcr; pin the sha tag of the commit in use instead.
+        # Images are multi-arch (amd64+arm64) — no digest workarounds needed.
+        operator:
+          image:
+            tag: sha-4f9045f
+        api:
+          image:
+            tag: sha-4f9045f
+          # Users may launch apps into this namespace (also the release ns,
+          # so ArgoCD creates and labels it).
+          allowedNamespaces:
+            - apps
+        ui:
+          image:
+            tag: sha-4f9045f
+        mcp:
+          image:
+            tag: sha-4f9045f
+
+        keycloak:
+          # Browser-facing URL (SPA login); the API fetches JWKS via the
+          # in-cluster URL (split horizon — natively supported by this chart).
+          url: https://keycloak.nebari.local
+          realm: nebari
+          internalUrl: http://keycloak-keycloakx-http.keycloak.svc.cluster.local:8080
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: apps
+
+  syncPolicy:
+    managedNamespaceMetadata:
+      labels:
+        nebari.dev/managed: "true"
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
