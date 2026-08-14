@@ -6,4 +6,9 @@ metadata:
     app.kubernetes.io/name: cert-manager
     app.kubernetes.io/managed-by: nebari-infrastructure-core
 spec:
-  selfSigned: {}
+  # Kept under its original name so every existing Certificate's issuerRef
+  # still resolves, but issuance now chains to the local root CA (root-ca.yaml)
+  # instead of minting empty-DN self-signed leaves that workstations cannot
+  # trust. Force-renew leaves after changing this (delete their tls secrets).
+  ca:
+    secretName: nebari-local-root-ca

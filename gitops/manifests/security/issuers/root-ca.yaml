@@ -1,0 +1,45 @@
+# Local root CA for *.nebari.local.
+#
+# cert-manager's plain selfSigned issuer mints per-Certificate self-signed
+# leaves with empty subject/issuer DNs (SANs only). macOS cannot anchor an
+# empty-DN cert in the keychain ("couldn't get X509-issuer name"), so desktop
+# clients (apollo-desktop, browsers, curl) can never trust those leaves.
+# Instead we mint one long-lived root CA here and point the existing
+# `selfsigned-issuer` ClusterIssuer at it (see selfsigned-clusterissuer.yaml),
+# so every gateway cert chains to a single root that is trusted once on the
+# workstation:
+#
+#   kubectl -n cert-manager get secret nebari-local-root-ca \
+#     -o jsonpath='{.data.ca\.crt}' | base64 -d > nebari-local-root-ca.pem
+#   sudo security add-trusted-cert -d -r trustRoot \
+#     -k /Library/Keychains/System.keychain nebari-local-root-ca.pem
+---
+# Bootstrap issuer: used only to self-sign the root CA certificate below.
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: selfsigned-bootstrap
+  labels:
+    app.kubernetes.io/name: cert-manager
+spec:
+  selfSigned: {}
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: nebari-local-root-ca
+  namespace: cert-manager
+  labels:
+    app.kubernetes.io/name: cert-manager
+spec:
+  isCA: true
+  commonName: nebari-local Root CA
+  secretName: nebari-local-root-ca
+  duration: 87600h # 10 years; local-only trust anchor
+  privateKey:
+    algorithm: ECDSA
+    size: 256
+  issuerRef:
+    name: selfsigned-bootstrap
+    kind: ClusterIssuer
+    group: cert-manager.io
