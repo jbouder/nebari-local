@@ -58,6 +58,8 @@ spec:
             provisionClient: true
             enforceAtGateway: true
             redirectURI: /oauth2/callback
+            groups: []
+            forwardAccessToken: true
             scopes:
               - openid
               - profile

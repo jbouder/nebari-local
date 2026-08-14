@@ -95,6 +95,12 @@ spec:
                     - port: 10443
                       protocol: TCP
           hub:
+            # Locally every service IP is private; the z2jh default egress
+            # policy blocks private IPs, which breaks the japps oauth
+            # callback (hub → gateway) with upstream timeouts.
+            networkPolicy:
+              egressAllowRules:
+                privateIPs: true
             extraEnv:
               JUPYTERHUB_OIDC_CLIENT_SECRET:
                 valueFrom:

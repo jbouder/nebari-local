@@ -29,6 +29,16 @@ spec:
         # ravnar subchart: trust the gateway's self-signed cert (httpx
         # honors SSL_CERT_FILE). ConfigMap created out-of-band — see README.
         ravnar:
+          # Stable DB password from an out-of-band secret (see README). The
+          # chart's lookup()-based reuse of its generated secret doesn't work
+          # under ArgoCD (helm template has no cluster access), so the
+          # password would otherwise regenerate on every sync.
+          postgres:
+            password:
+              valueFrom:
+                secretKeyRef:
+                  name: nebari-chat-postgres-password
+                  key: password
           extraEnv:
             SSL_CERT_FILE:
               value: /etc/ssl/nebari/ca-bundle.crt
