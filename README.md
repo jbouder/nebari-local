@@ -39,17 +39,30 @@ from inside pods; storage classes use the kind default (`standard`).
 
 **Apple Silicon note:** nebi and provenance-collector publish amd64-only
 images. On an arm64 kind node these fail with "no match for platform in
-manifest", so the manifests pin the amd64 manifest digest
-(`tag@sha256:...`), which containerd pulls as-is and Docker Desktop runs via
-Rosetta. When bumping image versions, refresh the digest:
+manifest". Two workarounds are in use (Docker Desktop's Rosetta runs the
+amd64 binaries either way):
 
-```bash
-TOKEN=$(curl -s "https://quay.io/v2/auth?service=quay.io&scope=repository:<org>/<repo>:pull" | jq -r .token)
-curl -s -H "Authorization: Bearer $TOKEN" \
-  -H "Accept: application/vnd.oci.image.index.v1+json" \
-  "https://quay.io/v2/<org>/<repo>/manifests/<tag>" | \
-  jq -r '.manifests[] | select(.platform.architecture=="amd64") | .digest'
-```
+1. *Digest pin* (nebi): set the image tag to `tag@sha256:<amd64-digest>` —
+   containerd pulls the referenced manifest without platform matching. Get
+   the digest with:
+   ```bash
+   TOKEN=$(curl -s "https://quay.io/v2/auth?service=quay.io&scope=repository:<org>/<repo>:pull" | jq -r .token)
+   curl -s -H "Authorization: Bearer $TOKEN" \
+     -H "Accept: application/vnd.oci.image.index.v1+json" \
+     "https://quay.io/v2/<org>/<repo>/manifests/<tag>" | \
+     jq -r '.manifests[] | select(.platform.architecture=="amd64") | .digest'
+   ```
+2. *Preload* (provenance-collector — its chart reuses `image.tag` in a k8s
+   label, where a digest is invalid): pull amd64 on the host and import into
+   the kind node; kubelet finds it via `IfNotPresent`:
+   ```bash
+   docker pull --platform linux/amd64 <image>:<tag>
+   docker save <image>:<tag> | docker exec -i nebari-local-control-plane \
+     ctr --namespace k8s.io images import --all-platforms -
+   ```
+   Required after a cluster recreate for:
+   `quay.io/nebari/provenance-collector:0.1.2` and
+   `ghcr.io/nebari-dev/provenance-collector-pack/frontend:0.1.2`.
 
 **Chat++ is credential-blocked:** its Helm chart and image on
 `quay.io/openteams` are private. Deploying it requires a quay pull token
