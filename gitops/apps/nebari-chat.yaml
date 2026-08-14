@@ -10,9 +10,11 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/nebari-dev/chat-pack.git
-    targetRevision: main
-    path: helm/nebari-chat
+    # Released chart (the in-repo chart has an unstamped "set-by-cd" version
+    # that helm rejects). Requires the quay-oci ArgoCD repository secret.
+    repoURL: oci://quay.io/nebari/charts
+    chart: nebari-chat
+    targetRevision: 0.0.25
     helm:
       releaseName: nebari-chat
       values: |
@@ -21,14 +23,7 @@ spec:
           url: http://keycloak-keycloakx-http.keycloak.svc.cluster.local:8080
           realm: nebari
 
-        # Chart defaults are "set-by-cd" placeholders; pin real tags.
-        ravnar:
-          image:
-            tag: "latest"
-
         frontend:
-          image:
-            tag: "0.0.99"
           keycloak:
             # Browser-facing auth server URL
             authServerUrl: "https://keycloak.nebari.local"
