@@ -52,17 +52,23 @@ amd64 binaries either way):
      "https://quay.io/v2/<org>/<repo>/manifests/<tag>" | \
      jq -r '.manifests[] | select(.platform.architecture=="amd64") | .digest'
    ```
-2. *Preload* (provenance-collector — its chart reuses `image.tag` in a k8s
-   label, where a digest is invalid): pull amd64 on the host and import into
-   the kind node; kubelet finds it via `IfNotPresent`:
+2. *Node-side digest pull + retag* (provenance-collector — its chart reuses
+   `image.tag` in a k8s label, where a digest is invalid, so the manifest
+   can't be digest-pinned). Pull the amd64 manifest by digest directly on
+   the kind node and force-tag it; kubelet then finds a platform-usable
+   image via `IfNotPresent`. Importing via `docker save | ctr images import`
+   does NOT work — the stored index still fails containerd's platform match.
    ```bash
-   docker pull --platform linux/amd64 <image>:<tag>
-   docker save <image>:<tag> | docker exec -i nebari-local-control-plane \
-     ctr --namespace k8s.io images import --all-platforms -
+   docker exec nebari-local-control-plane ctr -n k8s.io images pull \
+     --platform linux/amd64 <image>@sha256:<amd64-manifest-digest>
+   docker exec nebari-local-control-plane ctr -n k8s.io images tag --force \
+     <image>@sha256:<amd64-manifest-digest> <image>:<tag>
    ```
    Required after a cluster recreate for:
-   `quay.io/nebari/provenance-collector:0.1.2` and
-   `ghcr.io/nebari-dev/provenance-collector-pack/frontend:0.1.2`.
+   - `quay.io/nebari/provenance-collector:0.1.2`
+     (`sha256:c18bcf8a8c70bc60425b9293d0bbea3da857ae39f2a16d2b8aaee2ca447c7668`)
+   - `ghcr.io/nebari-dev/provenance-collector-pack/frontend:0.1.2`
+     (`sha256:08c87115afef393f498220b8fe43c338a511798d6183527cfce9acbf3d92f9b9`)
 
 **Chat:** the deployed chat is `nebari-dev/chat-pack` (public images,
 multi-arch). The OpenTeams Chat++ pack was considered first but its chart
