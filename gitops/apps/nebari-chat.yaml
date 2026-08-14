@@ -30,7 +30,8 @@ spec:
         # honors SSL_CERT_FILE). ConfigMap created out-of-band — see README.
         ravnar:
           extraEnv:
-            SSL_CERT_FILE: /etc/ssl/nebari/ca-bundle.crt
+            SSL_CERT_FILE:
+              value: /etc/ssl/nebari/ca-bundle.crt
           extraVolumes:
             - name: nebari-ca
               configMap:
