@@ -36,6 +36,7 @@ NIC-owned apps; `nebari-apps` allows any source repo and any namespace:
 | Nebari Chat | https://chat.nebari.local | nebari-dev/chat-pack (frontend + ravnar backend) |
 | Provenance Collector | https://provenance.nebari.local | Daily scan at 06:00; http persistence mode |
 | Apps | https://apps.nebari.local | Launch static/pixi web apps (UI + API + MCP at /mcp); apps serve at `<name>.apps.nebari.local` |
+| Harbor | https://harbor.nebari.local | OCI registry + Trivy scanning; "LOGIN VIA OIDC PROVIDER" (Keycloak) or `admin` with the harbor-admin secret |
 
 Local-cluster conventions used in these manifests: backend OIDC calls go to
 the in-cluster Keycloak service
@@ -119,7 +120,15 @@ after a cluster recreate**:
    The pack manifests reference the ConfigMap via `orgCABundle` (nebi) and
    `ravnar.extraEnv/extraVolumes` (chat).
 
-3. **Chat postgres password secret** — the ravnar chart's generated password
+3. **Harbor admin password secret** — Harbor's own admin account and the
+   OIDC-setup Job both read one out-of-band secret (never committed):
+   ```bash
+   kubectl --context kind-nebari-local create namespace harbor
+   kubectl --context kind-nebari-local -n harbor create secret generic harbor-admin \
+     --from-literal=HARBOR_ADMIN_PASSWORD="$(openssl rand -base64 24)"
+   ```
+
+4. **Chat postgres password secret** — the ravnar chart's generated password
    relies on helm `lookup()`, which ArgoCD can't use, so it would regenerate
    on every sync and break DB auth. The manifest instead reads a stable
    out-of-band secret:
@@ -154,7 +163,7 @@ hostname to localhost.
 new names appended whenever a pack is added):
 
 ```bash
-sudo sh -c 'echo "127.0.0.1 nebari.local argocd.nebari.local keycloak.nebari.local hub.nebari.local nebi.nebari.local chat.nebari.local chat-api.nebari.local provenance.nebari.local apps.nebari.local" >> /etc/hosts'
+sudo sh -c 'echo "127.0.0.1 nebari.local argocd.nebari.local keycloak.nebari.local hub.nebari.local nebi.nebari.local chat.nebari.local chat-api.nebari.local provenance.nebari.local apps.nebari.local harbor.nebari.local" >> /etc/hosts'
 ```
 
 > `/etc/hosts` has no wildcard support, so every app launched through the

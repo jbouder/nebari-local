@@ -1,0 +1,113 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: harbor-pack
+  namespace: argocd
+  labels:
+    app.kubernetes.io/part-of: nebari-packs
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: nebari-apps
+
+  source:
+    repoURL: https://github.com/nebari-dev/harbor-pack.git
+    targetRevision: main
+    path: chart
+    helm:
+      releaseName: harbor
+      values: |
+        nebariapp:
+          enabled: true
+          hostname: harbor.nebari.local
+          # Namespace is created and labeled nebari.dev/managed=true by ArgoCD
+          # (managedNamespaceMetadata below), so the chart must not own it.
+          manageNamespace: false
+
+        oidcSetup:
+          enabled: true
+          # Harbor admin password lives in the out-of-band `harbor-admin`
+          # Secret (see README) — shared by Harbor itself and this job.
+          adminPasswordSecret: harbor-admin
+          adminPasswordKey: HARBOR_ADMIN_PASSWORD
+          # The gateway cert for keycloak.nebari.local is self-signed; tell
+          # Harbor's OIDC client not to verify it (local cluster only).
+          verifyCert: false
+
+        harbor:
+          externalURL: https://harbor.nebari.local
+          existingSecretAdminPassword: harbor-admin
+          existingSecretAdminPasswordKey: HARBOR_ADMIN_PASSWORD
+
+          # goharbor publishes amd64-only images; pin each component to its
+          # amd64 manifest digest for the arm64 kind node (Rosetta runs them).
+          nginx:
+            image:
+              tag: "v2.15.1@sha256:1f9d06d040f2478f6cf7f6da0091877bf987a641810f4bfaadb2a87d73dbf4fb"
+          portal:
+            image:
+              tag: "v2.15.1@sha256:ac55161c57a8351807adf8f8def264bdd52667c371d0436beefebdac4341c9e2"
+          core:
+            image:
+              tag: "v2.15.1@sha256:887a85b8ea98b76bfc9f715f1a0785bb99f9a1034241513902dd6e95be922a83"
+          jobservice:
+            image:
+              tag: "v2.15.1@sha256:0de4fd2ce3a02d3e6591b439e4674ea085885ddf43652b44004cc67eb19dba12"
+          registry:
+            registry:
+              image:
+                tag: "v2.15.1@sha256:ebf0325c2661729dbb317cbf839608eb8b15cfa158911a94976f2c21563c466e"
+            controller:
+              image:
+                tag: "v2.15.1@sha256:554147a956989175f63f8d41573d716c6ddf6052acd1749c88c0f99ce6ee2bff"
+          database:
+            internal:
+              image:
+                tag: "v2.15.1@sha256:7944d8594a48a8d014e1fa440bc788348f2a779fa2c612ed6b79390cd767e6db"
+          redis:
+            internal:
+              image:
+                tag: "v2.15.1@sha256:5669d4828805d9ed0bbfc18c101c6ec82d26a13cb9242b48f6348a3e3b2e4cca"
+          trivy:
+            image:
+              tag: "v2.15.1@sha256:f0c52bed36c083ec4fded26cefab01e4cd58c9354c261cb3156c69f57bb50131"
+          exporter:
+            image:
+              tag: "v2.15.1@sha256:372275b6b6abeb571fa7bd5de458e3d75f1a1636503b3c0abe02938f2b285d75"
+
+          # Local-cluster PVC sizes (upstream defaults total ~70Gi).
+          persistence:
+            persistentVolumeClaim:
+              registry:
+                size: 10Gi
+              jobservice:
+                jobLog:
+                  size: 1Gi
+              database:
+                size: 2Gi
+              redis:
+                size: 1Gi
+              trivy:
+                size: 5Gi
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: harbor
+
+  syncPolicy:
+    managedNamespaceMetadata:
+      labels:
+        nebari.dev/managed: "true"
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
