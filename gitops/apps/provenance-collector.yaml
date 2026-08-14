@@ -29,6 +29,11 @@ spec:
           storageClass: standard
           size: 1Gi
 
+        frontend:
+          keycloak:
+            # Browser-facing URL used by the SPA's in-browser OIDC login.
+            url: https://keycloak.nebari.local
+
         webUI:
           enabled: true
           # Split-horizon: the dashboard pod calls userinfo via the in-cluster

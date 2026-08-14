@@ -18,7 +18,9 @@ spec:
       releaseName: nebi-pack
       values: |
         image:
-          tag: sha-630e19d
+          # nebi publishes amd64-only images; pin the amd64 manifest digest so
+          # the arm64 kind node pulls it and runs it via Rosetta emulation.
+          tag: "latest@sha256:48de16edc4e12bada5b673c5d511e1f27081e8be3e1fe071e9ba7572eeffc7c8"
         nebariapp:
           hostname: nebi.nebari.local
           landingPage:

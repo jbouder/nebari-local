@@ -22,7 +22,8 @@ spec:
         nebi:
           image:
             repository: quay.io/nebari/nebi
-            tag: sha-630e19d
+            # amd64-only image pinned by digest for the arm64 kind node (Rosetta)
+            tag: "latest@sha256:48de16edc4e12bada5b673c5d511e1f27081e8be3e1fe071e9ba7572eeffc7c8"
           remoteURL: https://nebi.nebari.local
           internalURL: http://nebi-pack-nebari-nebi-pack.nebi.svc.cluster.local
           namespace: nebi
@@ -41,7 +42,7 @@ spec:
           custom:
             external-url: hub.nebari.local
             terminal-customization: false
-            nebi-image: quay.io/nebari/nebi:sha-630e19d
+            nebi-image: quay.io/nebari/nebi:latest@sha256:48de16edc4e12bada5b673c5d511e1f27081e8be3e1fe071e9ba7572eeffc7c8
             nebi-remote-url: https://nebi.nebari.local
             nebi-internal-url: http://nebi-pack-nebari-nebi-pack.nebi.svc.cluster.local
             # In-cluster token endpoint: the external keycloak.nebari.local
