@@ -55,7 +55,7 @@ spec:
         -hf ggml-org/Qwen3-0.6B-GGUF:Q4_0
         --alias ggml-org/Qwen3-0.6B-GGUF
         --host 0.0.0.0 --port 8000
-        -c 8192 -t 4 --jinja
+        -c 8192 -t 4 --jinja --metrics
     replicas: 1
     monitoring:
       # llama-server does not expose vLLM-named metrics.

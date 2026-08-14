@@ -55,6 +55,22 @@ spec:
   destination:
     server: https://kubernetes.default.svc
     namespace: envoy-ai-gateway-system
+  # The chart mints the pod-mutator webhook certs with helm genCA, which
+  # produces a NEW CA on every render. Under ArgoCD, two syncs can therefore
+  # leave the webhook caBundle and the cert secret from different renders
+  # (apiserver -> webhook TLS fails, envoy proxy pods can't be created).
+  # Freeze both after first sync so re-renders never rotate them.
+  ignoreDifferences:
+    - kind: Secret
+      name: self-signed-cert-for-mutating-webhook
+      namespace: envoy-ai-gateway-system
+      jsonPointers:
+        - /data
+    - group: admissionregistration.k8s.io
+      kind: MutatingWebhookConfiguration
+      name: envoy-ai-gateway-gateway-pod-mutator.envoy-ai-gateway-system
+      jqPathExpressions:
+        - .webhooks[].clientConfig.caBundle
   syncPolicy:
     automated:
       prune: true
@@ -62,6 +78,7 @@ spec:
     syncOptions:
       - CreateNamespace=true
       - ServerSideApply=true
+      - RespectIgnoreDifferences=true
     retry:
       limit: 5
       backoff:
