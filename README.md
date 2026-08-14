@@ -113,6 +113,18 @@ after a cluster recreate**:
    The pack manifests reference the ConfigMap via `orgCABundle` (nebi) and
    `ravnar.extraEnv/extraVolumes` (chat).
 
+3. **Chat postgres password secret** — the ravnar chart's generated password
+   relies on helm `lookup()`, which ArgoCD can't use, so it would regenerate
+   on every sync and break DB auth. The manifest instead reads a stable
+   out-of-band secret:
+   ```bash
+   kubectl --context kind-nebari-local create secret generic nebari-chat-postgres-password \
+     -n nebari-chat --from-literal=password="$(openssl rand -hex 16)"
+   ```
+   (On an existing database, also run
+   `kubectl exec -n nebari-chat nebari-chat-ravnar-postgres-0 -- psql -U huginn -d ravnar -c "ALTER USER huginn PASSWORD '<pw>';"`
+   with the same value.)
+
 ArgoCD polls the `file://` repo on an interval; to pick up a new commit
 immediately:
 
