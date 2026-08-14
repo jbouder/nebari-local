@@ -1,0 +1,64 @@
+# Qwen3.6-35B-A3B (Apr 2026) — a MoE model with ~3B active params per token,
+# so it decodes at near-small-model speed on CPU while carrying 35B-class
+# quality. Same llama.cpp escape-hatch pattern as qwen3-0-6b.yaml (see the
+# comments there for why: CUDA-only default image, vLLM-arg swallowing).
+#
+# Q4_K_M is ~20GB; the startup probe budget is 120x30s = 60min, which covers
+# the HF download on first boot. Subsequent restarts reuse LLAMA_CACHE only
+# within the pod's lifetime (emptyDir) — a rescheduled pod re-downloads.
+apiVersion: llm.nebari.dev/v1alpha1
+kind: LLMModel
+metadata:
+  name: qwen3-6-35b-a3b
+  namespace: nebari-llm-serving-system
+spec:
+  access:
+    public: true
+
+  model:
+    # Clients send this exact string as "model" in the request body; the AI
+    # gateway routes on it and --alias registers it under the same name.
+    name: ggml-org/Qwen3.6-35B-A3B-GGUF
+    source: huggingface
+    preload: false
+    storage:
+      type: emptyDir
+      size: 25Gi
+
+  resources:
+    gpu:
+      count: 0
+      type: nvidia
+    requests:
+      cpu: "4"
+      memory: 24Gi
+    limits:
+      cpu: "12"
+      memory: 30Gi
+
+  serving:
+    image: ghcr.io/ggml-org/llama.cpp:server
+    command:
+      - sh
+      - -c
+      - >-
+        exec /app/llama-server
+        -hf ggml-org/Qwen3.6-35B-A3B-GGUF:Q4_K_M
+        --alias ggml-org/Qwen3.6-35B-A3B-GGUF
+        --host 0.0.0.0 --port 8000
+        -c 8192 -t 12 --jinja --metrics
+    replicas: 1
+    monitoring:
+      enabled: false
+
+  advanced:
+    vllm:
+      extraEnv:
+        - name: LLAMA_CACHE
+          value: /model-cache
+
+  endpoints:
+    external:
+      enabled: true
+    internal:
+      enabled: true
