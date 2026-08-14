@@ -19,6 +19,24 @@ foundational app-of-apps manifests (cert-manager, Envoy Gateway, Keycloak,
 PostgreSQL, nebari-operator, nebari-landingpage, OpenTelemetry collector)
 into `gitops/`.
 
+## Software packs
+
+Beyond the foundational apps, `gitops/apps/` adds these packs (synced by
+ArgoCD from this repo — add/edit a manifest, commit, and ArgoCD picks it up):
+
+| Pack | URL | Notes |
+|---|---|---|
+| Data Science (JupyterHub) | https://hub.nebari.local | Small/Medium spawn profiles |
+| Nebi | https://nebi.nebari.local | pixi environment management |
+| Chat++ | https://chat.nebari.local | UI only — expects a Hrafnar API backend, which is not deployed |
+| Provenance Collector | https://provenance.nebari.local | Daily scan at 06:00; http persistence mode |
+
+Local-cluster conventions used in these manifests: backend OIDC calls go to
+the in-cluster Keycloak service
+(`http://keycloak-keycloakx-http.keycloak.svc.cluster.local:8080`) because the
+external `keycloak.nebari.local` hostname is neither resolvable nor trusted
+from inside pods; storage classes use the kind default (`standard`).
+
 ## Access
 
 MetalLB assigns the gateway a Docker-network IP that macOS can't route to, so
@@ -27,7 +45,7 @@ access goes through a port-forward on the host.
 **One-time setup** — map the hostnames to localhost:
 
 ```bash
-sudo sh -c 'echo "127.0.0.1 nebari.local argocd.nebari.local keycloak.nebari.local" >> /etc/hosts'
+sudo sh -c 'echo "127.0.0.1 nebari.local argocd.nebari.local keycloak.nebari.local hub.nebari.local nebi.nebari.local chat.nebari.local provenance.nebari.local" >> /etc/hosts'
 ```
 
 **Start the gateway forward** (must stay running; needs sudo to bind 443):
