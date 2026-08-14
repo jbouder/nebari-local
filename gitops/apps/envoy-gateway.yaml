@@ -24,6 +24,39 @@ spec:
           envoyGateway:
             gateway:
               controllerName: gateway.envoyproxy.io/gatewayclass-controller
+            # AI Gateway extension wiring (required by llm-serving-pack;
+            # shape from envoyproxy/ai-gateway v0.5.0). Without enableBackend
+            # + backendResources the InferencePool backendRef 500s; without
+            # extensionManager the ext_proc filter never lands and per-model
+            # requests 404. The AI Gateway controller MUST be running before
+            # this config is applied.
+            extensionApis:
+              enableEnvoyPatchPolicy: true
+              enableBackend: true
+            extensionManager:
+              hooks:
+                xdsTranslator:
+                  translation:
+                    listener:
+                      includeAll: true
+                    route:
+                      includeAll: true
+                    cluster:
+                      includeAll: true
+                    secret:
+                      includeAll: true
+                  post:
+                    - Translation
+                    - Cluster
+                    - Route
+              service:
+                fqdn:
+                  hostname: ai-gateway-controller.envoy-ai-gateway-system.svc.cluster.local
+                  port: 1063
+              backendResources:
+                - group: inference.networking.k8s.io
+                  kind: InferencePool
+                  version: v1
         deployment:
           envoyGateway:
             resources:

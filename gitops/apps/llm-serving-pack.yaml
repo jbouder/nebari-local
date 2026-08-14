@@ -1,0 +1,100 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: llm-serving-pack
+  namespace: argocd
+  labels:
+    app.kubernetes.io/part-of: nebari-packs
+  annotations:
+    argocd.argoproj.io/sync-wave: "7"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: nebari-apps
+
+  source:
+    repoURL: https://nebari-dev.github.io/helm-repository
+    chart: nebari-llm-serving
+    targetRevision: "0.1.3"
+    helm:
+      releaseName: nebari-llm-serving
+      values: |
+        # ArgoCD creates + labels the namespace (managedNamespaceMetadata).
+        createNamespace: false
+
+        platform:
+          baseDomain: nebari.local
+          gateway:
+            # This cluster has a single shared gateway; use it for both.
+            external:
+              name: nebari-gateway
+              namespace: envoy-gateway-system
+            internal:
+              name: nebari-gateway
+              namespace: envoy-gateway-system
+            manageSharedListeners: true
+          tls:
+            clusterIssuer: selfsigned-issuer
+
+        auth:
+          oidc:
+            # Per-model JWT auth; explicit external issuer (matches token iss).
+            issuerURL: https://keycloak.nebari.local/realms/nebari
+            groupsClaim: groups
+
+        # NOTE: no GPUs on this local cluster — the control plane (operator,
+        # key manager, routing) runs fine, but LLMModel CRs will not schedule
+        # (llm-d serving images are CUDA-only).
+
+        # ghcr images are amd64-only; digest-pinned for the arm64 kind node.
+        operator:
+          image:
+            tag: "sha-a88351b@sha256:418407b59d9cd1a7f1717c45e1d5914a308f874b0ba1c419b921b479b7460535"
+            pullPolicy: IfNotPresent
+        keyManager:
+          enabled: true
+          image:
+            tag: "sha-a88351b@sha256:86e7af44fe6519e5c5cb30ffa9c7fe1a03ce587c4c1523814b544288934f3fb7"
+            pullPolicy: IfNotPresent
+          # Split horizon: JWKS fetched in-cluster, issuer validated external.
+          keycloak:
+            url: http://keycloak-keycloakx-http.keycloak.svc.cluster.local:8080
+            realm: nebari
+            issuerURL: https://keycloak.nebari.local
+          nebariApp:
+            enabled: true
+            hostname: llm-keys.nebari.local
+        frontend:
+          enabled: true
+          image:
+            tag: "sha-a88351b@sha256:2e61847c2313ebf4d58ec93a77a44bedf2d78d7365fd7d4aec75bfda9f03e76a"
+            pullPolicy: IfNotPresent
+          keycloak:
+            url: https://keycloak.nebari.local
+            realm: nebari
+
+        defaults:
+          storage:
+            storageClassName: standard
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: nebari-llm-serving-system
+
+  syncPolicy:
+    managedNamespaceMetadata:
+      labels:
+        nebari.dev/managed: "true"
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
