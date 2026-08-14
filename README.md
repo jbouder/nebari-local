@@ -100,6 +100,23 @@ curl -sk https://llm.nebari.local/v1/chat/completions \
 > SecurityPolicy's JWKS URI — the operator reconciles it back on every
 > api-key Secret change.
 
+> **Route timeout needs a live patch per model.** The ai-gateway controller
+> translates each model's AIGatewayRoutes into HTTPRoutes with a default
+> `request: 60s` timeout, and the operator doesn't override it for LLMModels
+> (it sets 120s for passthrough models only). CPU inference easily exceeds
+> 60s on long/thinking generations — streams die mid-token and apollo shows
+> "The agent could not complete the model request". Fix (sticks until the
+> LLMModel spec changes or the resource is recreated; re-apply per model):
+> ```bash
+> for r in <model>-internal <model>-external; do
+>   kubectl --context kind-nebari-local -n nebari-llm-serving-system \
+>     patch aigatewayroute $r --type=json \
+>     -p '[{"op":"add","path":"/spec/rules/0/timeouts","value":{"request":"600s"}}]'
+> done
+> ```
+> Upstream fix: the operator should set generous route timeouts for
+> LLMModel routes (or expose them on the CRD).
+
 > **Known upstream bug (nebari-llm-serving-pack operator):** every LLMModel
 > reconcile wipes the `<model>-api-key-metadata` ConfigMap
 > (`createOrUpdateConfigMap` sets `Data` from a desired object built with
