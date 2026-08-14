@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nebari-operator-controller-manager
+  namespace: nebari-operator-system
+spec:
+  template:
+    spec:
+      containers:
+        - name: manager
+          env:
+            # Keycloak integration configuration
+            - name: KEYCLOAK_ENABLED
+              value: "true"
+            - name: KEYCLOAK_URL
+              value: "http://keycloak-keycloakx-http.keycloak.svc.cluster.local:8080"
+            - name: KEYCLOAK_REALM
+              value: "nebari"
+            - name: KEYCLOAK_ADMIN_SECRET_NAME
+              value: "keycloak-admin-credentials"
+            - name: KEYCLOAK_ADMIN_SECRET_NAMESPACE
+              value: "keycloak"
+            - name: TLS_CLUSTER_ISSUER_NAME
+              value: "selfsigned-issuer"
+            - name: KEYCLOAK_ISSUER_CONTEXT_PATH
+              value: ""
+            - name: KEYCLOAK_EXTERNAL_URL
+              value: "https://keycloak.nebari.local"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi

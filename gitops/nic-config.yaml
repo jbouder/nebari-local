@@ -1,0 +1,25 @@
+project_name: nebari-local
+domain: nebari.local
+cluster:
+    local:
+        kind:
+            extra_mounts:
+                - container_path: /Users/johnnybouder/repos/nebari-local
+                  host_path: /Users/johnnybouder/repos/nebari-local
+                  read_only: true
+        node_selectors:
+            general:
+                kubernetes.io/os: linux
+            user:
+                kubernetes.io/os: linux
+            worker:
+                kubernetes.io/os: linux
+git_repository:
+    url: file:///Users/johnnybouder/repos/nebari-local
+    branch: main
+    path: gitops
+    auth:
+        ssh_key_env: ""
+        token_env: ""
+certificate:
+    type: selfsigned

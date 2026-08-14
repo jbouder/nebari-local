@@ -1,0 +1,10 @@
+{"time":"2026-08-14T11:47:10.560129-04:00","level":"INFO","msg":"Starting deployment"}
+{"time":"2026-08-14T11:47:10.560147-04:00","level":"INFO","msg":"Configuration parsed successfully","resource":"config","action":"validated","provider":"local","project_name":"nebari-local"}
+{"time":"2026-08-14T11:47:10.560151-04:00","level":"INFO","msg":"Provider selected","provider":"local"}
+{"time":"2026-08-14T11:47:10.596286-04:00","level":"INFO","msg":"Creating kind cluster nebari-local","resource":"provider","action":"deploy","cluster_name":"nebari-local","gitops_path":"/var/folders/yx/9y2lk28519q7rh_hm5fx96kh0000gn/T/nebari-gitops-nebari-local"}
+{"time":"2026-08-14T11:47:37.187819-04:00","level":"INFO","msg":"Kind cluster nebari-local created","resource":"provider","action":"deploy","kube_context":"kind-nebari-local","cluster_name":"nebari-local"}
+{"time":"2026-08-14T11:47:37.221868-04:00","level":"INFO","msg":"Infrastructure deployment completed","provider":"local"}
+{"time":"2026-08-14T11:47:37.222016-04:00","level":"INFO","msg":"Initializing local GitOps directory","path":"/Users/johnnybouder/repos/nebari-local"}
+{"time":"2026-08-14T11:47:37.222221-04:00","level":"INFO","msg":"Bootstrapping GitOps repository with ArgoCD application manifests"}
+{"time":"2026-08-14T11:47:37.2227-04:00","level":"INFO","msg":"Wrote NIC config to repository (auth fields scrubbed)","path":"/Users/johnnybouder/repos/nebari-local/gitops/nic-config.yaml"}
+{"time":"2026-08-14T11:47:37.222704-04:00","level":"INFO","msg":"Writing ArgoCD application manifests to git repository"}
