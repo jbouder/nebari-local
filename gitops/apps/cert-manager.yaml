@@ -21,6 +21,13 @@ spec:
       releaseName: cert-manager
       values: |
         installCRDs: true
+        # Leader-election Roles default to kube-system, which the scoped
+        # `foundational` AppProject (NIC >= 0.12) does not permit as a
+        # destination namespace — the sync fails validation. Keep leader
+        # election inside the release namespace instead.
+        global:
+          leaderElection:
+            namespace: cert-manager
         config:
           enableGatewayAPI: true
         # Serialize ACME HTTP-01 challenges to avoid a race when two Certificates
