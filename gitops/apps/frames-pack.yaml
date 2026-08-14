@@ -34,7 +34,7 @@ spec:
         seed:
           orgSlug: nebari-local
           orgDisplayName: "Nebari Local"
-          adminEmail: jbouder@openteams.com
+          adminEmail: admin@nebari.local  # must match the realm admin user email (email-matched invite)
 
         orgCABundle:
           configMapName: nebari-local-ca-bundle
