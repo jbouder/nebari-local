@@ -1,0 +1,75 @@
+# A CPU-only model small enough for the local (GPU-less, arm64) kind node.
+#
+# The pack's default serving image (llm-d-cuda) is CUDA-only, so this model
+# uses the CRD's sanctioned escape hatches — the same pattern upstream's own
+# dev environment uses (dev/manifests/test-model.yaml): gpu.count 0 plus a
+# custom serving.image and command override. llama.cpp's server image is
+# multi-arch (native arm64), speaks the OpenAI API, and serves the exact
+# endpoints the operator probes (/v1/models readiness, /health liveness).
+apiVersion: llm.nebari.dev/v1alpha1
+kind: LLMModel
+metadata:
+  name: qwen3-0-6b
+  # The validating webhook requires LLMModels in the operator namespace.
+  namespace: nebari-llm-serving-system
+spec:
+  access:
+    public: true
+
+  model:
+    # Clients must send this exact string as "model" in the request body —
+    # the AI gateway routes on it (x-ai-eg-model); --alias below makes
+    # llama-server register the model under the same name.
+    name: ggml-org/Qwen3-0.6B-GGUF
+    source: huggingface
+    # llama-server downloads the GGUF itself at startup (-hf); the operator's
+    # downloader only fetches safetensors layouts for vLLM.
+    preload: false
+    storage:
+      type: emptyDir
+      size: 2Gi
+
+  resources:
+    gpu:
+      count: 0
+      type: nvidia
+    requests:
+      cpu: "2"
+      memory: 2Gi
+    limits:
+      cpu: "4"
+      memory: 4Gi
+
+  serving:
+    image: ghcr.io/ggml-org/llama.cpp:server
+    # The operator always appends vLLM-style args (--model, --tensor-parallel-size,
+    # ...) after the command; wrapping in `sh -c` makes them unused positional
+    # params instead of unknown flags llama-server would reject.
+    # -t 4 matches the CPU limit (llama.cpp otherwise spawns one thread per
+    # host core and thrashes under the cgroup quota).
+    command:
+      - sh
+      - -c
+      - >-
+        exec /app/llama-server
+        -hf ggml-org/Qwen3-0.6B-GGUF:Q4_K_M
+        --alias ggml-org/Qwen3-0.6B-GGUF
+        --host 0.0.0.0 --port 8000
+        -c 8192 -t 4 --jinja
+    replicas: 1
+    monitoring:
+      # llama-server does not expose vLLM-named metrics.
+      enabled: false
+
+  advanced:
+    vllm:
+      extraEnv:
+        # Put llama-server's HF download cache on the model-storage volume.
+        - name: LLAMA_CACHE
+          value: /model-cache
+
+  endpoints:
+    external:
+      enabled: true
+    internal:
+      enabled: true

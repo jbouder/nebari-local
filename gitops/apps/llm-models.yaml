@@ -1,0 +1,36 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: llm-models
+  namespace: argocd
+  labels:
+    app.kubernetes.io/part-of: nebari-packs
+  annotations:
+    # After llm-serving-pack (wave 7): the LLMModel CRD and webhook must exist.
+    argocd.argoproj.io/sync-wave: "8"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: nebari-apps
+  source:
+    repoURL: file:///Users/johnnybouder/repos/nebari-local
+    targetRevision: main
+    path: gitops/manifests/llm-models
+    directory:
+      recurse: false
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: nebari-llm-serving-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: true
+    syncOptions:
+      - ServerSideApply=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
