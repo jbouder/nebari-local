@@ -1,0 +1,29 @@
+project_name: nebari-local
+domain: nebari.local
+
+certificate:
+  type: selfsigned
+
+cluster:
+  local:
+    kind:
+      extra_mounts:
+        # GitOps repo mount — must exactly match git_repository.url path below
+        - host_path: /Users/johnnybouder/repos/nebari-local
+          container_path: /Users/johnnybouder/repos/nebari-local
+          read_only: true
+    node_selectors:
+      general:
+        kubernetes.io/os: linux
+      user:
+        kubernetes.io/os: linux
+      worker:
+        kubernetes.io/os: linux
+
+# This repo doubles as the GitOps repo. NIC bootstraps the foundational
+# app-of-apps manifests into gitops/ and commits them; ArgoCD reads the
+# committed content through the kind mount above.
+git_repository:
+  url: "file:///Users/johnnybouder/repos/nebari-local"
+  branch: main
+  path: "gitops"
