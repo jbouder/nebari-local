@@ -7,6 +7,33 @@ This repo holds both the NIC config (`nebari-config.yaml`) and the GitOps tree
 (`gitops/`) that ArgoCD syncs from. The repo is mounted into the kind node so
 the in-cluster ArgoCD repo-server can read it via `file://`.
 
+## Quick start
+
+From zero to a browsable cluster (each step is detailed in the sections below):
+
+1. **Install NIC** (>= 0.12.0): `brew install nebari-dev/tap/nic`
+2. **Deploy**: `nic deploy -f nebari-config.yaml` — creates the kind cluster,
+   bootstraps ArgoCD, and syncs everything in `gitops/` (foundational apps +
+   all software packs).
+3. **Re-apply the out-of-band pieces** (required for pack OIDC; see
+   [In-cluster access](#in-cluster-access-to-nebarilocal-required-for-pack-oidc)):
+   CoreDNS rewrite, CA-bundle ConfigMaps, `harbor-admin` secret, and the chat
+   postgres password secret.
+4. **Add the `/etc/hosts` entries** — one line mapping every hostname to
+   `127.0.0.1` (see [Access](#access) for the current full list).
+5. **Start the gateway port-forward** (must stay running):
+   ```bash
+   sudo kubectl --context kind-nebari-local port-forward -n envoy-gateway-system \
+     svc/envoy-envoy-gateway-system-nebari-gateway-be66687c 443:443
+   ```
+6. **Get the sign-in password** (username `admin`):
+   ```bash
+   kubectl --context kind-nebari-local -n keycloak get secret nebari-realm-admin-credentials \
+     -o jsonpath='{.data.password}' | base64 -d
+   ```
+7. **Browse** https://nebari.local (accept the self-signed-cert warning once
+   per hostname) — the landing page links to every installed pack.
+
 ## Deploy
 
 Requires NIC **>= 0.12.0** (`brew install nebari-dev/tap/nic`).
