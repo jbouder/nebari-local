@@ -1,0 +1,36 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: gateway-api-inference-extension
+  namespace: argocd
+  labels:
+    app.kubernetes.io/part-of: nebari-packs
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: nebari-apps
+
+  source:
+    repoURL: file:///Users/johnnybouder/repos/nebari-local
+    targetRevision: main
+    path: gitops/manifests/gateway-api-inference-extension
+
+  destination:
+    server: https://kubernetes.default.svc
+    # CRDs are cluster-scoped; ArgoCD just requires a namespace value.
+    namespace: kube-system
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - ServerSideApply=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m

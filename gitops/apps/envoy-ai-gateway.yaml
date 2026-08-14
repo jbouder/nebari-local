@@ -1,0 +1,70 @@
+# Envoy AI Gateway: two upstream charts (CRDs, then controller + webhooks).
+# Manual install is the documented workaround until the llm-serving chart's
+# envoyAIGateway.install flag exists (llm-serving-pack#44).
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: envoy-ai-gateway-crds
+  namespace: argocd
+  labels:
+    app.kubernetes.io/part-of: nebari-packs
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: nebari-apps
+  source:
+    chart: ai-gateway-crds-helm
+    repoURL: docker.io/envoyproxy
+    targetRevision: v0.5.0
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: envoy-ai-gateway-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: envoy-ai-gateway
+  namespace: argocd
+  labels:
+    app.kubernetes.io/part-of: nebari-packs
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: nebari-apps
+  source:
+    chart: ai-gateway-helm
+    repoURL: docker.io/envoyproxy
+    targetRevision: v0.5.0
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: envoy-ai-gateway-system
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
