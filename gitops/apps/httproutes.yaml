@@ -20,6 +20,8 @@ spec:
 
   destination:
     server: https://kubernetes.default.svc
+    # Required by the scoped foundational AppProject (nic 0.12).
+    namespace: argocd
 
   syncPolicy:
     automated:

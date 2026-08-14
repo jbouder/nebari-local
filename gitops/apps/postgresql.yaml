@@ -11,7 +11,10 @@ metadata:
   finalizers:
     - resources-finalizer.argocd.argoproj.io
 spec:
-  project: foundational
+  # bitnami repo fell out of the 0.12 foundational allow-list (Keycloak's DB
+  # moved to CNPG on fresh installs); this existing install keeps bitnami and
+  # is managed under the open packs project instead.
+  project: nebari-apps
 
   source:
     chart: postgresql
