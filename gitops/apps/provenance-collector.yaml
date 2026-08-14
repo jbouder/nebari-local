@@ -43,6 +43,13 @@ spec:
           # Split-horizon: the dashboard pod calls userinfo via the in-cluster
           # Keycloak service (the external hostname is not reachable from pods).
           oidcIssuer: http://keycloak-keycloakx-http.keycloak.svc.cluster.local:8080/realms/nebari
+          # Gates the "Run Scan" button — EMPTY DISABLES IT (unlike
+          # nebariapp.auth.groups, where empty means allow everyone). The
+          # realm's group mapper has full.path=false, so the claim carries
+          # bare names; both forms listed in case that ever flips.
+          adminGroups:
+            - argocd-admins
+            - /argocd-admins
 
         nebariapp:
           enabled: true
