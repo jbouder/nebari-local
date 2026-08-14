@@ -23,6 +23,10 @@ spec:
           url: http://keycloak-keycloakx-http.keycloak.svc.cluster.local:8080
           realm: nebari
 
+        backend:
+          nebariapp:
+            hostname: chat-api.nebari.local
+
         frontend:
           keycloak:
             # Browser-facing auth server URL

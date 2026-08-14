@@ -98,7 +98,7 @@ hostname to localhost.
 new names appended whenever a pack is added):
 
 ```bash
-sudo sh -c 'echo "127.0.0.1 nebari.local argocd.nebari.local keycloak.nebari.local hub.nebari.local nebi.nebari.local chat.nebari.local provenance.nebari.local" >> /etc/hosts'
+sudo sh -c 'echo "127.0.0.1 nebari.local argocd.nebari.local keycloak.nebari.local hub.nebari.local nebi.nebari.local chat.nebari.local chat-api.nebari.local provenance.nebari.local" >> /etc/hosts'
 ```
 
 **Start the gateway forward** (must stay running; needs sudo to bind 443):
