@@ -17,8 +17,9 @@ From zero to a browsable cluster (each step is detailed in the sections below):
    all software packs).
 3. **Re-apply the out-of-band pieces** (required for pack OIDC; see
    [In-cluster access](#in-cluster-access-to-nebarilocal-required-for-pack-oidc)):
-   CoreDNS rewrite, CA-bundle ConfigMaps, `harbor-admin` secret, and the chat
-   postgres password secret.
+   CoreDNS rewrite, CA-bundle ConfigMaps, `harbor-admin` secret, the
+   Keycloak postgres credential secrets, and the chat postgres password
+   secret.
 4. **Add the `/etc/hosts` entries** — one line mapping every hostname to
    `127.0.0.1` (see [Access](#access) for the current full list).
 5. **Start the gateway port-forward** (must stay running):
@@ -229,7 +230,23 @@ after a cluster recreate**:
      --from-literal=HARBOR_ADMIN_PASSWORD="$(openssl rand -base64 24)"
    ```
 
-4. **Chat postgres password secret** — the ravnar chart's generated password
+4. **Keycloak postgres credential secrets** — the pre-CNPG bitnami
+   postgresql app and the keycloakx chart reference two secrets that the
+   old dev NIC build created at deploy time but released NIC (>= 0.12) does
+   not (its fresh trees use CNPG instead). Without them `postgresql-0`
+   is stuck ContainerCreating and Keycloak in CreateContainerConfigError:
+   ```bash
+   PGPW=$(openssl rand -hex 16)
+   kubectl --context kind-nebari-local -n keycloak create secret generic postgresql-credentials \
+     --from-literal=postgres-password="$PGPW" --from-literal=user-password="$PGPW"
+   kubectl --context kind-nebari-local -n keycloak create secret generic keycloak-postgresql-credentials \
+     --from-literal=password="$(openssl rand -hex 16)"
+   ```
+   (Create BEFORE postgres first boots if possible — initdb creates the
+   `keycloak` DB user from `keycloak-postgresql-credentials`. On an existing
+   PVC the initdb script won't re-run; keep the old passwords or ALTER USER.)
+
+5. **Chat postgres password secret** — the ravnar chart's generated password
    relies on helm `lookup()`, which ArgoCD can't use, so it would regenerate
    on every sync and break DB auth. The manifest instead reads a stable
    out-of-band secret:
