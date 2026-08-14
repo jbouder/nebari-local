@@ -66,20 +66,25 @@ NIC-owned apps; `nebari-apps` allows any source repo and any namespace:
 | Harbor | https://harbor.nebari.local | OCI registry + Trivy scanning; "LOGIN VIA OIDC PROVIDER" (Keycloak) or `admin` with the harbor-admin secret |
 | Frames | https://frames.nebari.local | Context Frames registry + remote MCP endpoint (vendored chart at `gitops/charts/nebari-frames` — local CA addition) |
 | LLM Serving | https://llm-keys.nebari.local | llm-d operator + API-key manager UI. **No GPUs** here, so GPU `LLMModel` CRs won't schedule (default serving image is CUDA-only). Prereqs installed alongside: Envoy AI Gateway v0.5.0 + GIE v1.5.0 CRDs, and the foundational envoy-gateway app carries AI-extension wiring |
-| ↳ CPU model | https://llm.nebari.local | `qwen3-0-6b` (`gitops/manifests/llm-models/`): Qwen3-0.6B GGUF on llama.cpp's multi-arch server image — `gpu.count: 0` + `serving.command` override (`sh -c` swallows the operator's vLLM args). All models share `llm.nebari.local`, routed by the `model` field in the request body |
+| ↳ CPU models | https://llm.nebari.local | Two CPU models (`gitops/manifests/llm-models/`) on llama.cpp's multi-arch server image — `gpu.count: 0` + `serving.command` override (`sh -c` swallows the operator's vLLM args). All models share `llm.nebari.local`, routed by the `model` field in the request body |
 
-**Try the CPU model** — mint an API key at https://llm-keys.nebari.local
-(or read an existing one from the `qwen3-0-6b-api-keys` secret in
+Current models (both thinking models — append ` /no_think` to prompts or
+raise `max_tokens`, or the whole budget goes to reasoning tokens):
+
+| LLMModel | Request `model` string | What it is |
+|---|---|---|
+| `qwen3-5-4b` | `unsloth/Qwen3.5-4B-GGUF` | Qwen3.5-4B Q4_K_M (~2.7GB) — the fast daily driver, ~30-40 tok/s |
+| `qwen3-6-35b-a3b` | `ggml-org/Qwen3.6-35B-A3B-GGUF` | Qwen3.6-35B-A3B MoE Q4_K_M (~20GB, ~3B active params/token) — big-model quality at usable CPU speed |
+
+**Try a model** — mint an API key at https://llm-keys.nebari.local
+(or read an existing one from the `<model>-api-keys` secret in
 `nebari-llm-serving-system`), then:
 
 ```bash
 curl -sk https://llm.nebari.local/v1/chat/completions \
   -H "Authorization: Bearer $API_KEY" -H 'Content-Type: application/json' \
-  -d '{"model":"ggml-org/Qwen3-0.6B-GGUF","messages":[{"role":"user","content":"Say hello. /no_think"}]}'
+  -d '{"model":"unsloth/Qwen3.5-4B-GGUF","messages":[{"role":"user","content":"Say hello. /no_think"}]}'
 ```
-
-(Qwen3 is a thinking model; append ` /no_think` to prompts or raise
-`max_tokens`, or the whole budget goes to reasoning tokens.)
 
 > The Envoy AI Gateway injects its request-processing sidecar into the envoy
 > proxy pod via a mutating webhook, so the proxy pod must be (re)created
