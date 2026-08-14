@@ -88,25 +88,26 @@ curl -sk https://llm.nebari.local/v1/chat/completions \
 > `kubectl rollout restart deploy/envoy-envoy-gateway-system-nebari-gateway-be66687c -n envoy-gateway-system`
 > (breaks the running port-forward; restart that too).
 
-> **JWT auth on `llm-internal.nebari.local` needs a live patch.** The
-> llm-serving operator renders each model's internal SecurityPolicy with
-> `remoteJWKS.uri` derived from the external issuer URL
-> (`https://keycloak.nebari.local/...`), which Envoy's JWKS fetcher can't
-> reach from inside the proxy (self-managed CA it doesn't trust) — every JWT
-> then fails and clients see 401s: apollo-desktop model discovery comes back
-> empty and the llm-keys UI shows no models/keys (creates still land in the
-> `<model>-api-keys` secret). Point the JWKS at the in-cluster Keycloak
-> service instead:
-> ```bash
-> kubectl --context kind-nebari-local -n nebari-llm-serving-system \
->   patch securitypolicy qwen3-0-6b-internal-auth --type=json \
->   -p '[{"op":"replace","path":"/spec/jwt/providers/0/remoteJWKS/uri","value":"http://keycloak-keycloakx-http.keycloak.svc.cluster.local:8080/realms/nebari/protocol/openid-connect/certs"}]'
-> ```
-> The operator doesn't watch SecurityPolicies, so the patch sticks until the
-> `LLMModel` CR changes or the operator restarts — re-apply per model after
-> either (and after cluster recreate). Proper fix: teach the operator a
-> separate JWKS URL override (split-horizon, like the key-manager's
-> `keyManager.keycloak.url`) in nebari-llm-serving-pack.
+> **JWT auth on `llm-internal.nebari.local`** depends on envoy fetching
+> Keycloak's JWKS from the external URL the operator renders
+> (`https://keycloak.nebari.local/...`). The proxy validates that fetch
+> against its container's system CAs, so
+> `gitops/manifests/networking/envoyproxy.yaml` overlays the proxy's CA
+> bundle with the `nebari-local-ca-bundle` ConfigMap (which must exist in
+> `envoy-gateway-system` — it's in the README re-create loop). Without it,
+> every JWT 401s ("Jwks remote fetch is failed") and apollo-desktop model
+> discovery comes back empty. Don't bother live-patching the
+> SecurityPolicy's JWKS URI — the operator reconciles it back on every
+> api-key Secret change.
+
+> **Known upstream bug (nebari-llm-serving-pack operator):** every LLMModel
+> reconcile wipes the `<model>-api-key-metadata` ConfigMap
+> (`createOrUpdateConfigMap` sets `Data` from a desired object built with
+> nil Data — unlike the Secret path, which preserves data). Since key
+> creation itself updates the api-keys Secret and triggers a reconcile,
+> key metadata vanishes right after minting and the llm-keys UI lists no
+> keys ("keys don't persist"). The key credentials themselves survive in
+> the `<model>-api-keys` Secret and keep working.
 
 Local-cluster conventions used in these manifests: backend OIDC calls go to
 the in-cluster Keycloak service
