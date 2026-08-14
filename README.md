@@ -9,6 +9,8 @@ the in-cluster ArgoCD repo-server can read it via `file://`.
 
 ## Deploy
 
+Requires NIC **>= 0.12.0** (`brew install nebari-dev/tap/nic`).
+
 ```bash
 nic deploy -f nebari-config.yaml
 ```
@@ -22,7 +24,10 @@ into `gitops/`.
 ## Software packs
 
 Beyond the foundational apps, `gitops/apps/` adds these packs (synced by
-ArgoCD from this repo — add/edit a manifest, commit, and ArgoCD picks it up):
+ArgoCD from this repo — add/edit a manifest, commit, and ArgoCD picks it up).
+Pack Applications must declare `project: nebari-apps` — since NIC 0.12 the
+`default` AppProject is deny-all and `foundational` is reserved for
+NIC-owned apps; `nebari-apps` allows any source repo and any namespace:
 
 | Pack | URL | Notes |
 |---|---|---|
