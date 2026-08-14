@@ -1,0 +1,61 @@
+# Qwen3.5-4B (Feb 2026) — the newest *small* Qwen (the 3.6/3.8 lines only
+# ship 27B+ models). Replaces the original Qwen3-0.6B as the fast/cheap
+# option. Same llama.cpp escape-hatch pattern as qwen3-6-35b-a3b.yaml —
+# see that file and the original qwen3-0-6b pattern for the rationale
+# (CUDA-only default image, vLLM-arg swallowing).
+apiVersion: llm.nebari.dev/v1alpha1
+kind: LLMModel
+metadata:
+  name: qwen3-5-4b
+  namespace: nebari-llm-serving-system
+spec:
+  access:
+    public: true
+
+  model:
+    # Clients send this exact string as "model" in the request body; the AI
+    # gateway routes on it and --alias registers it under the same name.
+    name: unsloth/Qwen3.5-4B-GGUF
+    source: huggingface
+    preload: false
+    storage:
+      type: emptyDir
+      size: 5Gi
+
+  resources:
+    gpu:
+      count: 0
+      type: nvidia
+    requests:
+      cpu: "2"
+      memory: 4Gi
+    limits:
+      cpu: "6"
+      memory: 8Gi
+
+  serving:
+    image: ghcr.io/ggml-org/llama.cpp:server
+    command:
+      - sh
+      - -c
+      - >-
+        exec /app/llama-server
+        -hf unsloth/Qwen3.5-4B-GGUF:Q4_K_M
+        --alias unsloth/Qwen3.5-4B-GGUF
+        --host 0.0.0.0 --port 8000
+        -c 8192 -t 6 --jinja --metrics
+    replicas: 1
+    monitoring:
+      enabled: false
+
+  advanced:
+    vllm:
+      extraEnv:
+        - name: LLAMA_CACHE
+          value: /model-cache
+
+  endpoints:
+    external:
+      enabled: true
+    internal:
+      enabled: true
