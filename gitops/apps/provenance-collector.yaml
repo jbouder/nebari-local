@@ -18,9 +18,9 @@ spec:
       values: |
         schedule: "0 6 * * *"
 
-        # amd64-only images pinned by digest for the arm64 kind node (Rosetta)
-        image:
-          tag: "0.1.2@sha256:c18bcf8a8c70bc60425b9293d0bbea3da857ae39f2a16d2b8aaee2ca447c7668"
+        # NOTE: this chart's images are amd64-only and image.tag feeds a k8s
+        # label, so tag@digest is invalid here. Instead the amd64 images are
+        # pre-loaded into the kind node (see README) and pulled IfNotPresent.
 
         config:
           clusterName: nebari-local
@@ -34,8 +34,6 @@ spec:
           size: 1Gi
 
         frontend:
-          image:
-            tag: "0.1.2@sha256:08c87115afef393f498220b8fe43c338a511798d6183527cfce9acbf3d92f9b9"
           keycloak:
             # Browser-facing URL used by the SPA's in-browser OIDC login.
             url: https://keycloak.nebari.local
