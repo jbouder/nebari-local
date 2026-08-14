@@ -134,6 +134,19 @@ spec:
                 $KCADM update clients/$ARGOCD_CLIENT_ID/default-client-scopes/$GROUPS_SCOPE_ID -r nebari || true
               fi
 
+              echo "Creating Apollo Desktop OIDC client..."
+              # Native desktop app: public client, Authorization Code + PKCE (S256),
+              # loopback redirect on an ephemeral port (apollo-desktop internal/hubauth).
+              $KCADM create clients -r nebari \
+                -s clientId=apollo-desktop \
+                -s enabled=true \
+                -s protocol=openid-connect \
+                -s publicClient=true \
+                -s 'redirectUris=["http://127.0.0.1:*"]' \
+                -s directAccessGrantsEnabled=false \
+                -s standardFlowEnabled=true \
+                -s 'attributes={"pkce.code.challenge.method":"S256","post.logout.redirect.uris":"http://127.0.0.1:*"}' || echo "Client may already exist"
+
               echo "Creating ArgoCD access groups..."
               $KCADM create groups -r nebari -s name=argocd-admins || echo "Group may already exist"
               $KCADM create groups -r nebari -s name=argocd-viewers || echo "Group may already exist"
