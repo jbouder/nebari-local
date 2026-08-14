@@ -8,7 +8,7 @@ metadata:
   finalizers:
     - resources-finalizer.argocd.argoproj.io
 spec:
-  project: default
+  project: nebari-apps
   source:
     # Released chart (the in-repo chart has an unstamped "set-by-cd" version
     # that helm rejects). Requires the quay-oci ArgoCD repository secret.

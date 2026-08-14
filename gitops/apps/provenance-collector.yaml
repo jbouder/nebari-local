@@ -8,7 +8,7 @@ metadata:
   finalizers:
     - resources-finalizer.argocd.argoproj.io
 spec:
-  project: default
+  project: nebari-apps
   source:
     repoURL: https://nebari-dev.github.io/helm-repository
     chart: provenance-collector
