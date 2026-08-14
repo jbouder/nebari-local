@@ -51,6 +51,13 @@ spec:
         # auto-derived from nebariapp.hostname (split-horizon aware).
         # Storage classes are left empty to use the cluster default (standard).
 
+        # Trust the self-signed gateway cert for https://keycloak.nebari.local
+        # (JWKS/token endpoints from Keycloak discovery point at the external
+        # URL; the CoreDNS rewrite makes it resolvable in-cluster, this makes
+        # it trusted). ConfigMap created out-of-band — see README.
+        orgCABundle:
+          configMapName: nebari-local-ca-bundle
+
   destination:
     server: https://kubernetes.default.svc
     namespace: nebi

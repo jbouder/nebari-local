@@ -18,10 +18,27 @@ spec:
     helm:
       releaseName: nebari-chat
       values: |
-        # Backend token verification via the in-cluster Keycloak service
+        # Single URL serves the browser SPA redirect AND backend token
+        # validation (issuer match), so it must be the external URL. The
+        # CoreDNS rewrite makes it resolvable in-cluster; the CA bundle
+        # below makes its self-signed cert trusted by the backend.
         keycloak:
-          url: http://keycloak-keycloakx-http.keycloak.svc.cluster.local:8080
+          url: https://keycloak.nebari.local
           realm: nebari
+
+        # ravnar subchart: trust the gateway's self-signed cert (httpx
+        # honors SSL_CERT_FILE). ConfigMap created out-of-band — see README.
+        ravnar:
+          extraEnv:
+            SSL_CERT_FILE: /etc/ssl/nebari/ca-bundle.crt
+          extraVolumes:
+            - name: nebari-ca
+              configMap:
+                name: nebari-local-ca-bundle
+          extraVolumeMounts:
+            - name: nebari-ca
+              mountPath: /etc/ssl/nebari
+              readOnly: true
 
         backend:
           nebariapp:
