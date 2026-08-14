@@ -88,6 +88,26 @@ curl -sk https://llm.nebari.local/v1/chat/completions \
 > `kubectl rollout restart deploy/envoy-envoy-gateway-system-nebari-gateway-be66687c -n envoy-gateway-system`
 > (breaks the running port-forward; restart that too).
 
+> **JWT auth on `llm-internal.nebari.local` needs a live patch.** The
+> llm-serving operator renders each model's internal SecurityPolicy with
+> `remoteJWKS.uri` derived from the external issuer URL
+> (`https://keycloak.nebari.local/...`), which Envoy's JWKS fetcher can't
+> reach from inside the proxy (self-managed CA it doesn't trust) — every JWT
+> then fails and clients see 401s: apollo-desktop model discovery comes back
+> empty and the llm-keys UI shows no models/keys (creates still land in the
+> `<model>-api-keys` secret). Point the JWKS at the in-cluster Keycloak
+> service instead:
+> ```bash
+> kubectl --context kind-nebari-local -n nebari-llm-serving-system \
+>   patch securitypolicy qwen3-0-6b-internal-auth --type=json \
+>   -p '[{"op":"replace","path":"/spec/jwt/providers/0/remoteJWKS/uri","value":"http://keycloak-keycloakx-http.keycloak.svc.cluster.local:8080/realms/nebari/protocol/openid-connect/certs"}]'
+> ```
+> The operator doesn't watch SecurityPolicies, so the patch sticks until the
+> `LLMModel` CR changes or the operator restarts — re-apply per model after
+> either (and after cluster recreate). Proper fix: teach the operator a
+> separate JWKS URL override (split-horizon, like the key-manager's
+> `keyManager.keycloak.url`) in nebari-llm-serving-pack.
+
 Local-cluster conventions used in these manifests: backend OIDC calls go to
 the in-cluster Keycloak service
 (`http://keycloak-keycloakx-http.keycloak.svc.cluster.local:8080`) because the
