@@ -75,6 +75,44 @@ multi-arch). The OpenTeams Chat++ pack was considered first but its chart
 and image on `quay.io/openteams` are private and would need a quay pull
 token wired into an ArgoCD repository secret plus an imagePullSecret.
 
+### In-cluster access to `*.nebari.local` (required for pack OIDC)
+
+Keycloak pins its token issuer to `https://keycloak.nebari.local`, and pack
+backends (nebi JWKS fetch, chat token validation) must reach that URL from
+inside the cluster. Without help it resolves to 127.0.0.1 in-cluster
+(Docker Desktop's DNS reads the Mac's `/etc/hosts`), causing Keycloak
+redirect loops. Two out-of-band pieces fix this — **both must be re-applied
+after a cluster recreate**:
+
+1. **CoreDNS rewrite** — send `*.nebari.local` to the Envoy gateway. Add to
+   the `kube-system/coredns` ConfigMap's Corefile (before the `kubernetes`
+   block), then `kubectl rollout restart deploy/coredns -n kube-system`:
+   ```
+   rewrite stop {
+      name regex (.*\.)?nebari\.local envoy-envoy-gateway-system-nebari-gateway-be66687c.envoy-gateway-system.svc.cluster.local
+      answer auto
+   }
+   ```
+   (The service name is the gateway's generated Envoy service — check with
+   `kubectl get svc -n envoy-gateway-system`.)
+
+2. **CA-bundle ConfigMaps** — backends must trust the gateway's self-signed
+   cert. Build a bundle (system roots + live gateway cert, so real outbound
+   TLS keeps working) and create it in each consuming namespace:
+   ```bash
+   echo | openssl s_client -connect 127.0.0.1:443 -servername keycloak.nebari.local 2>/dev/null | \
+     openssl x509 -outform PEM > /tmp/gateway.crt
+   cat /etc/ssl/cert.pem /tmp/gateway.crt > /tmp/ca-bundle.crt
+   for ns in nebi nebari-chat; do
+     kubectl --context kind-nebari-local delete configmap nebari-local-ca-bundle -n $ns --ignore-not-found
+     kubectl --context kind-nebari-local create configmap nebari-local-ca-bundle -n $ns \
+       --from-file=ca-bundle.crt=/tmp/ca-bundle.crt
+   done
+   ```
+   Also re-run this if cert-manager rotates the gateway cert (~1 year).
+   The pack manifests reference the ConfigMap via `orgCABundle` (nebi) and
+   `ravnar.extraEnv/extraVolumes` (chat).
+
 ArgoCD polls the `file://` repo on an interval; to pick up a new commit
 immediately:
 
