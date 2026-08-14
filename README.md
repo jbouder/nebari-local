@@ -37,6 +37,33 @@ the in-cluster Keycloak service
 external `keycloak.nebari.local` hostname is neither resolvable nor trusted
 from inside pods; storage classes use the kind default (`standard`).
 
+**Apple Silicon note:** nebi and provenance-collector publish amd64-only
+images. On an arm64 kind node these fail with "no match for platform in
+manifest", so the manifests pin the amd64 manifest digest
+(`tag@sha256:...`), which containerd pulls as-is and Docker Desktop runs via
+Rosetta. When bumping image versions, refresh the digest:
+
+```bash
+TOKEN=$(curl -s "https://quay.io/v2/auth?service=quay.io&scope=repository:<org>/<repo>:pull" | jq -r .token)
+curl -s -H "Authorization: Bearer $TOKEN" \
+  -H "Accept: application/vnd.oci.image.index.v1+json" \
+  "https://quay.io/v2/<org>/<repo>/manifests/<tag>" | \
+  jq -r '.manifests[] | select(.platform.architecture=="amd64") | .digest'
+```
+
+**Chat++ is credential-blocked:** its Helm chart and image on
+`quay.io/openteams` are private. Deploying it requires a quay pull token
+wired into an ArgoCD repository secret (chart) and an imagePullSecret
+(image). The manifest is in place; it stays Unknown/Degraded until then.
+
+ArgoCD polls the `file://` repo on an interval; to pick up a new commit
+immediately:
+
+```bash
+kubectl --context kind-nebari-local -n argocd annotate app nebari-root \
+  argocd.argoproj.io/refresh=hard --overwrite
+```
+
 ## Access
 
 MetalLB assigns the gateway a Docker-network IP that macOS can't route to, so
