@@ -178,7 +178,7 @@ after a cluster recreate**:
    kubectl --context kind-nebari-local -n cert-manager get secret nebari-local-root-ca \
      -o jsonpath='{.data.ca\.crt}' | base64 -d > /tmp/nebari-local-root-ca.pem
    cat /etc/ssl/cert.pem /tmp/nebari-local-root-ca.pem > /tmp/ca-bundle.crt
-   for ns in nebi nebari-chat frames; do
+   for ns in nebi nebari-chat frames envoy-gateway-system; do
      kubectl --context kind-nebari-local -n $ns create configmap nebari-local-ca-bundle \
        --from-file=ca-bundle.crt=/tmp/ca-bundle.crt --dry-run=client -o yaml | \
        kubectl --context kind-nebari-local apply --server-side --force-conflicts -f -

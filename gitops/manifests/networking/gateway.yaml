@@ -8,6 +8,13 @@ metadata:
     app.kubernetes.io/managed-by: nebari-infrastructure-core
 spec:
   gatewayClassName: envoy-gateway
+  # Local-only: mounts the nebari-local CA bundle into the proxy so envoy
+  # can validate upstream TLS to *.nebari.local (see envoyproxy.yaml).
+  infrastructure:
+    parametersRef:
+      group: gateway.envoyproxy.io
+      kind: EnvoyProxy
+      name: nebari-gateway-proxy-config
   listeners:
     - name: http
       protocol: HTTP

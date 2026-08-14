@@ -1,0 +1,39 @@
+# Proxy-pod customization for nebari-gateway (referenced via the Gateway's
+# infrastructure.parametersRef).
+#
+# Overlays the envoy container's system CA bundle with the local one
+# (public roots + nebari-local Root CA) so envoy can validate TLS on
+# upstream fetches to *.nebari.local — concretely the llm-serving
+# SecurityPolicies' remoteJWKS fetch of
+# https://keycloak.nebari.local/realms/nebari/protocol/openid-connect/certs,
+# which envoy resolves back to the gateway itself (CoreDNS rewrite) and
+# verifies against system CAs. Without this, every JWT on llm-internal
+# fails with "Jwks remote fetch is failed" (401 for all clients, e.g.
+# apollo-desktop model discovery).
+#
+# Depends on the out-of-band `nebari-local-ca-bundle` ConfigMap in
+# envoy-gateway-system (see README re-create loop). Changing this resource
+# rolls the proxy deployment — the host 443 port-forward dies with it.
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: EnvoyProxy
+metadata:
+  name: nebari-gateway-proxy-config
+  namespace: envoy-gateway-system
+  labels:
+    app.kubernetes.io/name: nebari-gateway
+spec:
+  provider:
+    type: Kubernetes
+    kubernetes:
+      envoyDeployment:
+        pod:
+          volumes:
+            - name: nebari-local-ca
+              configMap:
+                name: nebari-local-ca-bundle
+        container:
+          volumeMounts:
+            - name: nebari-local-ca
+              mountPath: /etc/ssl/certs/ca-certificates.crt
+              subPath: ca-bundle.crt
+              readOnly: true
