@@ -95,6 +95,12 @@ spec:
                     - port: 10443
                       protocol: TCP
           hub:
+            # japps runs inside the hub pod and calls the hub API via the
+            # `hub` Service; the hub NetworkPolicy only admits pods with the
+            # network-access-hub label, which the hub pod lacks by default.
+            # (kind's CNI enforces NetworkPolicies, unlike some cloud CNIs.)
+            labels:
+              hub.jupyter.org/network-access-hub: "true"
             # Locally every service IP is private; the z2jh default egress
             # policy blocks private IPs, which breaks the japps oauth
             # callback (hub → gateway) with upstream timeouts.
