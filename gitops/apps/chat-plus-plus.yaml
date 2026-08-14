@@ -1,0 +1,55 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: chat-plus-plus
+  namespace: argocd
+  labels:
+    app.kubernetes.io/part-of: nebari-packs
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    chart: chat-plus-plus-chart
+    repoURL: oci://quay.io/openteams/chat-plus-plus-chart
+    targetRevision: 0.1.8
+    helm:
+      releaseName: chat-plus-plus
+      values: |
+        image:
+          repository: quay.io/openteams/chat-plus-plus
+          tag: "sha-6006216"
+
+        keycloak:
+          authServerUrl: "https://keycloak.nebari.local"
+          realm: "nebari"
+
+        # Hrafnar is not deployed on this cluster; the chat UI loads but
+        # agent/API calls will fail until a backend exists at this address.
+        api:
+          url: "http://hrafnar.hrafnar.svc.cluster.local"
+
+        nebariapp:
+          hostname: "chat.nebari.local"
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: chat-plus-plus
+
+  syncPolicy:
+    managedNamespaceMetadata:
+      labels:
+        nebari.dev/managed: "true"
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m

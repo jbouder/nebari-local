@@ -1,0 +1,89 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: provenance-collector
+  namespace: argocd
+  labels:
+    app.kubernetes.io/part-of: nebari-packs
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://nebari-dev.github.io/helm-repository
+    chart: provenance-collector
+    targetRevision: "0.1.1"
+    helm:
+      releaseName: provenance-collector
+      values: |
+        schedule: "0 6 * * *"
+
+        config:
+          clusterName: nebari-local
+          verifySignatures: true
+          helmEnabled: true
+          checkUpdates: true
+
+        persistence:
+          mode: http
+          storageClass: standard
+          size: 1Gi
+
+        webUI:
+          enabled: true
+          # Split-horizon: the dashboard pod calls userinfo via the in-cluster
+          # Keycloak service (the external hostname is not reachable from pods).
+          oidcIssuer: http://keycloak-keycloakx-http.keycloak.svc.cluster.local:8080/realms/nebari
+
+        nebariapp:
+          enabled: true
+          hostname: provenance.nebari.local
+          service:
+            port: 8080
+          routing:
+            tls:
+              enabled: true
+          auth:
+            enabled: true
+            provider: keycloak
+            provisionClient: true
+            enforceAtGateway: true
+            redirectURI: /oauth2/callback
+            scopes:
+              - openid
+              - profile
+              - email
+              - groups
+          landingPage:
+            enabled: true
+            displayName: "Provenance Collector"
+            description: "Container image provenance and compliance reports"
+            category: "Platform"
+            priority: 10
+            healthCheck:
+              enabled: true
+              path: /healthz
+              intervalSeconds: 30
+              timeoutSeconds: 5
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: provenance-system
+
+  syncPolicy:
+    managedNamespaceMetadata:
+      labels:
+        nebari.dev/managed: "true"
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m

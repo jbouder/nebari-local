@@ -1,0 +1,72 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: nebi-pack
+  namespace: argocd
+  labels:
+    app.kubernetes.io/part-of: nebari-packs
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+
+  source:
+    repoURL: https://github.com/nebari-dev/nebari-nebi-pack.git
+    targetRevision: main
+    path: .
+    helm:
+      releaseName: nebi-pack
+      values: |
+        image:
+          tag: sha-630e19d
+        nebariapp:
+          hostname: nebi.nebari.local
+          landingPage:
+            enabled: true
+            displayName: "Nebi"
+            description: "Manage and share pixi environments for your Nebari cluster"
+            icon: "https://raw.githubusercontent.com/nebari-dev/nebi/main/docs/static/img/nebi-icon.png"
+            category: "Platform"
+            priority: 10
+            healthCheck:
+              enabled: true
+              path: /api/v1/health
+          routing:
+            routes:
+              - pathPrefix: /
+            publicRoutes:
+              - pathPrefix: /api/
+                pathType: PathPrefix
+              - pathPrefix: /docs/
+                pathType: PathPrefix
+          auth:
+            redirectURI: /oauth2/callback
+            tokenExchange:
+              enabled: true
+            deviceFlowClient:
+              enabled: true
+        # OIDC issuer/client and the in-cluster Keycloak discovery URL are
+        # auto-derived from nebariapp.hostname (split-horizon aware).
+        # Storage classes are left empty to use the cluster default (standard).
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: nebi
+
+  syncPolicy:
+    managedNamespaceMetadata:
+      labels:
+        nebari.dev/managed: "true"
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
