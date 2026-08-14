@@ -28,7 +28,7 @@ ArgoCD from this repo — add/edit a manifest, commit, and ArgoCD picks it up):
 |---|---|---|
 | Data Science (JupyterHub) | https://hub.nebari.local | Small/Medium spawn profiles |
 | Nebi | https://nebi.nebari.local | pixi environment management |
-| Chat++ | https://chat.nebari.local | UI only — expects a Hrafnar API backend, which is not deployed |
+| Nebari Chat | https://chat.nebari.local | nebari-dev/chat-pack (frontend + ravnar backend) |
 | Provenance Collector | https://provenance.nebari.local | Daily scan at 06:00; http persistence mode |
 
 Local-cluster conventions used in these manifests: backend OIDC calls go to
@@ -64,10 +64,10 @@ amd64 binaries either way):
    `quay.io/nebari/provenance-collector:0.1.2` and
    `ghcr.io/nebari-dev/provenance-collector-pack/frontend:0.1.2`.
 
-**Chat++ is credential-blocked:** its Helm chart and image on
-`quay.io/openteams` are private. Deploying it requires a quay pull token
-wired into an ArgoCD repository secret (chart) and an imagePullSecret
-(image). The manifest is in place; it stays Unknown/Degraded until then.
+**Chat:** the deployed chat is `nebari-dev/chat-pack` (public images,
+multi-arch). The OpenTeams Chat++ pack was considered first but its chart
+and image on `quay.io/openteams` are private and would need a quay pull
+token wired into an ArgoCD repository secret plus an imagePullSecret.
 
 ArgoCD polls the `file://` repo on an interval; to pick up a new commit
 immediately:
@@ -82,7 +82,14 @@ kubectl --context kind-nebari-local -n argocd annotate app nebari-root \
 MetalLB assigns the gateway a Docker-network IP that macOS can't route to, so
 access goes through a port-forward on the host.
 
-**One-time setup** — map the hostnames to localhost:
+**One port-forward serves everything.** All services — foundational and
+software packs — share the single Envoy gateway, which routes by hostname
+(SNI/Host header). Adding a pack never requires a new port-forward; it only
+requires a new `/etc/hosts` entry so the browser resolves the pack's
+hostname to localhost.
+
+**One-time setup** — map every hostname to localhost (re-run the line with
+new names appended whenever a pack is added):
 
 ```bash
 sudo sh -c 'echo "127.0.0.1 nebari.local argocd.nebari.local keycloak.nebari.local hub.nebari.local nebi.nebari.local chat.nebari.local provenance.nebari.local" >> /etc/hosts'
