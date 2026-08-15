@@ -7,6 +7,25 @@ This repo holds both the NIC config (`nebari-config.yaml`) and the GitOps tree
 (`gitops/`) that ArgoCD syncs from. The repo is mounted into the kind node so
 the in-cluster ArgoCD repo-server can read it via `file://`.
 
+## Minimum specs
+
+Everything runs in a single kind node inside the Docker Desktop VM, so the
+VM's resource settings (Docker Desktop → Settings → Resources) are what
+matter. Measured on the current stack (all packs + both CPU LLM models):
+scheduled pod **requests** total ~11.5 CPU / ~37Gi memory, of which the two
+LLM models account for 6 CPU / 28Gi (limits are heavily overcommitted:
+~33 CPU / ~54Gi).
+
+| Resource | Minimum | Comfortable | Notes |
+|---|---|---|---|
+| VM CPUs | 12 | 16–18 | Inference is CPU-bound: the 4B model runs 6 threads, the 35B 12. Below ~12 CPUs generations get slow and probes can flap. |
+| VM memory | 40 GB | 44+ GB | Requests already sit at ~91% of a 39GB VM. **Dropping the 35B model** (delete `gitops/manifests/llm-models/qwen3-6-35b-a3b.yaml`) frees 24Gi of requests and brings the floor down to ~16 GB. |
+| VM disk | 150 GB free | 250 GB | Node filesystem currently uses ~126GB: ~50GB images, ~25GB model downloads (re-downloaded after pod reschedule — emptyDir), plus volumes/build cache. |
+| Host machine | 48 GB RAM Mac | 64 GB | macOS + Docker Desktop overhead on top of the VM. Apple Silicon is fine — the handful of amd64-only images are digest-pinned and run under Rosetta. |
+
+The models are the swing factor: without any `LLMModel` CRs the whole stack
+fits in roughly 8 CPUs / 16 GB VM memory.
+
 ## Quick start
 
 From zero to a browsable cluster (each step is detailed in the sections below):
@@ -17,7 +36,8 @@ From zero to a browsable cluster (each step is detailed in the sections below):
    all software packs).
 3. **Run the post-recreate script** — automates every out-of-band piece
    (CoreDNS rewrite, out-of-band secrets, CA-bundle ConfigMaps, amd64 image
-   retags, Keycloak live bits, envoy extproc restart, LLM route timeouts).
+   retags, Keycloak live bits, envoy extproc restart, chat-app LLM API keys,
+   LLM route timeouts).
    Idempotent; re-run it any time (e.g. after an LLM model becomes Ready):
    ```bash
    ./scripts/post-recreate.sh
@@ -70,7 +90,7 @@ NIC-owned apps; `nebari-apps` allows any source repo and any namespace:
 |---|---|---|
 | Data Science (JupyterHub) | https://hub.nebari.local | Small/Medium spawn profiles |
 | Nebi | https://nebi.nebari.local | pixi environment management |
-| Nebari Chat | https://chat.nebari.local | nebari-dev/chat-pack (frontend + ravnar backend) |
+| Nebari Chat | https://chat.nebari.local | nebari-dev/chat-pack (frontend + ravnar backend). Two static agents backed by the cluster's LLM models (`config.inline` in `gitops/apps/nebari-chat.yaml`; per-model API keys minted by `post-recreate.sh`). SSE streams need the `BackendTrafficPolicy` timeout overrides in `gitops/manifests/chat-policies/` — carried by the `chat-policies` app because the `foundational` project rejects the `nebari-chat` namespace |
 | Provenance Collector | https://provenance.nebari.local | Daily scan at 06:00; http persistence mode |
 | Apps | https://apps.nebari.local | Launch static/pixi web apps (UI + API + MCP at /mcp); apps serve at `<name>.apps.nebari.local` |
 | Harbor | https://harbor.nebari.local | OCI registry + Trivy scanning; "LOGIN VIA OIDC PROVIDER" (Keycloak) or `admin` with the harbor-admin secret |
@@ -180,9 +200,9 @@ amd64 binaries either way):
 ### In-cluster access to `*.nebari.local` (required for pack OIDC)
 
 > **All of the below is automated by `./scripts/post-recreate.sh`** (plus
-> the Keycloak live bits, image retags, extproc restart, and LLM route
-> timeouts). The details are kept here as reference for what the script
-> does and for one-off manual repair.
+> the Keycloak live bits, image retags, extproc restart, chat-app LLM API
+> keys, and LLM route timeouts). The details are kept here as reference for
+> what the script does and for one-off manual repair.
 
 Keycloak pins its token issuer to `https://keycloak.nebari.local`, and pack
 backends (nebi JWKS fetch, chat token validation) must reach that URL from
