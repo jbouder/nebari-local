@@ -29,6 +29,11 @@ spec:
         # ravnar subchart: trust the gateway's self-signed cert (httpx
         # honors SSL_CERT_FILE). ConfigMap created out-of-band — see README.
         ravnar:
+          # Chart 0.0.25 defaults to app images 0.0.14; no newer stable chart
+          # wraps the 0.0.15 images yet, so pin them here (drop when a chart
+          # release >= 0.0.26 ships and the targetRevision is bumped).
+          image:
+            tag: "0.0.15"
           # Stable DB password from an out-of-band secret (see README). The
           # chart's lookup()-based reuse of its generated secret doesn't work
           # under ArgoCD (helm template has no cluster access), so the
@@ -120,6 +125,8 @@ spec:
             hostname: chat-api.nebari.local
 
         frontend:
+          image:
+            tag: "0.0.15"
           keycloak:
             # Browser-facing auth server URL
             authServerUrl: "https://keycloak.nebari.local"
