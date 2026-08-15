@@ -15,25 +15,34 @@ From zero to a browsable cluster (each step is detailed in the sections below):
 2. **Deploy**: `nic deploy -f nebari-config.yaml` — creates the kind cluster,
    bootstraps ArgoCD, and syncs everything in `gitops/` (foundational apps +
    all software packs).
-3. **Re-apply the out-of-band pieces** (required for pack OIDC; see
-   [In-cluster access](#in-cluster-access-to-nebarilocal-required-for-pack-oidc)):
-   CoreDNS rewrite, CA-bundle ConfigMaps, `harbor-admin` secret, the
-   Keycloak postgres credential secrets, and the chat postgres password
-   secret.
-4. **Add the `/etc/hosts` entries** — one line mapping every hostname to
-   `127.0.0.1` (see [Access](#access) for the current full list).
-5. **Start the gateway port-forward** (must stay running):
+3. **Run the post-recreate script** — automates every out-of-band piece
+   (CoreDNS rewrite, out-of-band secrets, CA-bundle ConfigMaps, amd64 image
+   retags, Keycloak live bits, envoy extproc restart, LLM route timeouts).
+   Idempotent; re-run it any time (e.g. after an LLM model becomes Ready):
+   ```bash
+   ./scripts/post-recreate.sh
+   ```
+4. **Trust the new root CA** (fresh mint per recreate; the script leaves it
+   at `/tmp/nebari-local-root-ca.pem` — needed by apollo-desktop, browsers,
+   curl):
+   ```bash
+   sudo security add-trusted-cert -d -r trustRoot \
+     -k /Library/Keychains/System.keychain /tmp/nebari-local-root-ca.pem
+   ```
+5. **Add the `/etc/hosts` entries** (survive recreates — only needed once, or
+   when hostnames change; see [Access](#access) for the current full list).
+6. **Start the gateway port-forward** (must stay running):
    ```bash
    sudo kubectl --context kind-nebari-local port-forward -n envoy-gateway-system \
      svc/envoy-envoy-gateway-system-nebari-gateway-be66687c 443:443
    ```
-6. **Get the sign-in password** (username `admin`):
+7. **Get the sign-in password** (username `admin`):
    ```bash
    kubectl --context kind-nebari-local -n keycloak get secret nebari-realm-admin-credentials \
      -o jsonpath='{.data.password}' | base64 -d
    ```
-7. **Browse** https://nebari.local (accept the self-signed-cert warning once
-   per hostname) — the landing page links to every installed pack.
+8. **Browse** https://nebari.local — the landing page links to every
+   installed pack.
 
 ## Deploy
 
@@ -90,9 +99,9 @@ curl -sk https://llm.nebari.local/v1/chat/completions \
 > The Envoy AI Gateway injects its request-processing sidecar into the envoy
 > proxy pod via a mutating webhook, so the proxy pod must be (re)created
 > AFTER envoy-ai-gateway is installed — a pod that predates it 500s on every
-> `llm.nebari.local` request (`.../run.sock: No such file or directory`). Fix:
-> `kubectl rollout restart deploy/envoy-envoy-gateway-system-nebari-gateway-be66687c -n envoy-gateway-system`
-> (breaks the running port-forward; restart that too).
+> `llm.nebari.local` request (`.../run.sock: No such file or directory`).
+> `post-recreate.sh` detects the missing sidecar and restarts the proxy
+> deployment automatically (this breaks a running port-forward; restart it).
 
 > **JWT auth on `llm-internal.nebari.local`** depends on envoy fetching
 > Keycloak's JWKS from the external URL the operator renders
@@ -111,17 +120,12 @@ curl -sk https://llm.nebari.local/v1/chat/completions \
 > `request: 60s` timeout, and the operator doesn't override it for LLMModels
 > (it sets 120s for passthrough models only). CPU inference easily exceeds
 > 60s on long/thinking generations — streams die mid-token and apollo shows
-> "The agent could not complete the model request". Fix (sticks until the
-> LLMModel spec changes or the resource is recreated; re-apply per model):
-> ```bash
-> for r in <model>-internal <model>-external; do
->   kubectl --context kind-nebari-local -n nebari-llm-serving-system \
->     patch aigatewayroute $r --type=json \
->     -p '[{"op":"add","path":"/spec/rules/0/timeouts","value":{"request":"600s"}}]'
-> done
-> ```
-> Upstream fix: the operator should set generous route timeouts for
-> LLMModel routes (or expose them on the CRD).
+> "The agent could not complete the model request". `post-recreate.sh`
+> patches every existing model route to 600s — but the patch only sticks
+> until the next LLMModel reconcile rebuilds the routes, and routes for a
+> model only exist once it's Ready. **Re-run the script after a model
+> becomes Ready or after any LLMModel spec change.** Upstream fix: the
+> operator should set generous route timeouts (or expose them on the CRD).
 
 > **Known upstream bug (nebari-llm-serving-pack operator):** every LLMModel
 > reconcile wipes the `<model>-api-key-metadata` ConfigMap
@@ -165,7 +169,7 @@ amd64 binaries either way):
    docker exec nebari-local-control-plane ctr -n k8s.io images tag --force \
      <image>@sha256:<amd64-manifest-digest> <image>:<tag>
    ```
-   Required after a cluster recreate for:
+   Required after a cluster recreate (automated by `post-recreate.sh`) for:
    - `quay.io/nebari/provenance-collector:0.1.2`
      (`sha256:c18bcf8a8c70bc60425b9293d0bbea3da857ae39f2a16d2b8aaee2ca447c7668`)
    - `ghcr.io/nebari-dev/provenance-collector-pack/frontend:0.1.2`
@@ -173,12 +177,17 @@ amd64 binaries either way):
 
 ### In-cluster access to `*.nebari.local` (required for pack OIDC)
 
+> **All of the below is automated by `./scripts/post-recreate.sh`** (plus
+> the Keycloak live bits, image retags, extproc restart, and LLM route
+> timeouts). The details are kept here as reference for what the script
+> does and for one-off manual repair.
+
 Keycloak pins its token issuer to `https://keycloak.nebari.local`, and pack
 backends (nebi JWKS fetch, chat token validation) must reach that URL from
 inside the cluster. Without help it resolves to 127.0.0.1 in-cluster
 (Docker Desktop's DNS reads the Mac's `/etc/hosts`), causing Keycloak
-redirect loops. Two out-of-band pieces fix this — **both must be re-applied
-after a cluster recreate**:
+redirect loops. These out-of-band pieces fix this — **all must be re-applied
+after a cluster recreate** (i.e. re-run the script):
 
 1. **CoreDNS rewrite** — send `*.nebari.local` to the Envoy gateway. Add to
    the `kube-system/coredns` ConfigMap's Corefile (before the `kubernetes`
@@ -257,6 +266,21 @@ after a cluster recreate**:
    (On an existing database, also run
    `kubectl exec -n nebari-chat nebari-chat-ravnar-postgres-0 -- psql -U huginn -d ravnar -c "ALTER USER huginn PASSWORD '<pw>';"`
    with the same value.)
+
+6. **Keycloak live bits** the operator doesn't create (upstream gaps):
+   - `frames-audience` client scope — an `oidc-audience-mapper` adding the
+     frames SPA client id to token `aud` (frames rejects tokens without it),
+     attached as a default scope to the frames SPA/device clients,
+     `apollo-desktop`, and `debug-cli`.
+   - `debug-cli` public client (direct-access grants, no standard flow) for
+     CLI token minting:
+     ```bash
+     curl -s https://keycloak.nebari.local/realms/nebari/protocol/openid-connect/token \
+       -d grant_type=password -d client_id=debug-cli -d username=admin \
+       -d password=<realm-admin-pass> -d scope=openid
+     ```
+   The script waits for the operator-created frames clients before
+   attaching the scope; if it warns a client wasn't found, re-run it.
 
 ArgoCD polls the `file://` repo on an interval; to pick up a new commit
 immediately:
@@ -344,6 +368,17 @@ nic kubeconfig -f nebari-config.yaml
 nic destroy -f nebari-config.yaml
 ```
 
-To rebuild from scratch, run destroy followed by deploy. Note kind mounts are
-fixed at cluster creation — if the repo path changes, a destroy/deploy cycle
-is required.
+To rebuild from scratch, run destroy, deploy, then
+`./scripts/post-recreate.sh` (re-run it if it reports anything still
+pending), and re-trust the fresh root CA (Quick start steps 3–4). Note kind
+mounts are fixed at cluster creation — if the repo path changes, a
+destroy/deploy cycle is required.
+
+Known from-scratch behavior: CRD ordering races (cert-manager's
+`Certificate` for llm-serving-pack, `LLMModel` for llm-models) can exhaust
+ArgoCD's 5-retry budget and leave apps stuck `Failed` even after the CRDs
+arrive — `post-recreate.sh` re-triggers any failed app syncs automatically.
+Expect a handful of apps to stay OutOfSync-but-Healthy permanently
+(gateway-config — the LLM operator live-patches listeners onto the Gateway;
+httproutes; the nebari-chat/nebi-pack postgres StatefulSets; nebari-root):
+this drift is normal here.
