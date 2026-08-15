@@ -32,6 +32,13 @@ spec:
           routing:
             routes:
               - pathPrefix: /
+          auth:
+            # Do NOT forward Keycloak's access token upstream: jhub-apps
+            # prefers the Authorization header over its own session cookie
+            # and can't validate an RS256 Keycloak token (expects its own
+            # HS256 JWT) -> every request 401s -> endless login redirect
+            # loop. Newer nebari-operator defaults this to true.
+            forwardAccessToken: false
           landingPage:
             enabled: true
             displayName: "JupyterHub"
