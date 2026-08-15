@@ -12,9 +12,14 @@ spec:
   source:
     # Released chart (the in-repo chart has an unstamped "set-by-cd" version
     # that helm rejects). Requires the quay-oci ArgoCD repository secret.
+    # 0.0.26-pr.189 pre-release: required by app images >= 0.0.15, whose
+    # frontend renders /config.json from KEYCLOAK_* env vars the 0.0.25
+    # chart never sets (it mounted the old keycloak-config.json path, so
+    # the image's baked-in dev config won). Bump to stable 0.0.26 when it
+    # ships.
     repoURL: oci://quay.io/nebari/charts/nebari-chat
     chart: nebari-chat
-    targetRevision: 0.0.25
+    targetRevision: 0.0.26-pr.189
     helm:
       releaseName: nebari-chat
       values: |
@@ -29,9 +34,8 @@ spec:
         # ravnar subchart: trust the gateway's self-signed cert (httpx
         # honors SSL_CERT_FILE). ConfigMap created out-of-band — see README.
         ravnar:
-          # Chart 0.0.25 defaults to app images 0.0.14; no newer stable chart
-          # wraps the 0.0.15 images yet, so pin them here (drop when a chart
-          # release >= 0.0.26 ships and the targetRevision is bumped).
+          # The pr.189 chart defaults to a pr image; pin the stable release
+          # (drop when a stable chart wrapping these images ships).
           image:
             tag: "0.0.15"
           # Stable DB password from an out-of-band secret (see README). The
