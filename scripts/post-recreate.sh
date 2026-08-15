@@ -206,7 +206,46 @@ else
   echo "  proxy restarted (extproc injected). Restart your 443 port-forward if it was running."
 fi
 
-# ------------------------------------------------- 7. llm route timeouts
+# --------------------------------------------- 7. chat-app LLM api keys
+# The chat app's static agents (gitops/apps/nebari-chat.yaml config.inline)
+# call the external LLM gateway with per-model sk- keys. The gateway
+# authorizes exactly the data-key names of each model's <model>-api-keys
+# Secret, so writing a key there directly both authenticates (pooled
+# credentialRefs) and authorizes (x-llm-client-id match) — no key-manager
+# API call needed. The key is mirrored into a nebari-chat-namespace secret
+# for the pod env (cross-namespace secretKeyRef is impossible). Runs before
+# the timeout step: the Secret write triggers the LLMModel reconcile that
+# reverts route timeouts.
+log "Chat-app LLM API keys"
+LLM_NS=nebari-llm-serving-system
+CID=svc-nebari-chat-1
+CHAT_KEY_ARGS=()
+for m in qwen3-5-4b qwen3-6-35b-a3b; do
+  if ! $KUBECTL -n "$LLM_NS" get secret "$m-api-keys" >/dev/null 2>&1; then
+    echo "  $m-api-keys not created yet (operator pending) — re-run this script later"
+    continue
+  fi
+  KEY=$($KUBECTL -n "$LLM_NS" get secret "$m-api-keys" \
+    -o jsonpath="{.data['$CID']}" | base64 -d || true)
+  if [ -z "$KEY" ]; then
+    KEY="sk-$(openssl rand -hex 24)"
+    B64=$(printf %s "$KEY" | base64)
+    $KUBECTL -n "$LLM_NS" patch secret "$m-api-keys" --type merge \
+      -p "{\"data\":{\"$CID\":\"$B64\"}}" >/dev/null
+    echo "  minted $CID key for $m (activates in ~1 min)"
+  else
+    echo "  $m: $CID key already minted"
+  fi
+  CHAT_KEY_ARGS+=(--from-literal="$m=$KEY")
+done
+if [ ${#CHAT_KEY_ARGS[@]} -gt 0 ]; then
+  $KUBECTL -n nebari-chat create secret generic nebari-chat-llm-api-keys \
+    "${CHAT_KEY_ARGS[@]}" --dry-run=client -o yaml |
+    $KUBECTL apply -f - >/dev/null
+  echo "  nebari-chat/nebari-chat-llm-api-keys applied"
+fi
+
+# ------------------------------------------------- 8. llm route timeouts
 # ai-gateway defaults LLM routes to 60s; CPU generations exceed that.
 # Patch sticks until the LLMModel spec changes. Routes appear only once a
 # model is Ready, so patch whatever exists and report what's still pending.

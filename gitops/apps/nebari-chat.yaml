@@ -42,6 +42,70 @@ spec:
           extraEnv:
             SSL_CERT_FILE:
               value: /etc/ssl/nebari/ca-bundle.crt
+            # Per-model sk- keys for the LLM gateway (external endpoint).
+            # Keys are model-scoped, hence one per model. Secret is created
+            # out-of-band by scripts/post-recreate.sh (see README).
+            LLM_QWEN35_4B_API_KEY:
+              valueFrom:
+                secretKeyRef:
+                  name: nebari-chat-llm-api-keys
+                  key: qwen3-5-4b
+            LLM_QWEN36_35B_API_KEY:
+              valueFrom:
+                secretKeyRef:
+                  name: nebari-chat-llm-api-keys
+                  key: qwen3-6-35b-a3b
+
+        # Static agents backed by the cluster's own LLM-serving models,
+        # reached through the external AI-gateway endpoint (the internal one
+        # wants a short-lived JWT, unusable from static config). The CoreDNS
+        # rewrite resolves llm.nebari.local in-cluster and SSL_CERT_FILE
+        # (above) trusts its cert. templateLiteral emits Ravnar's {{ VAR }}
+        # env-var placeholder, surviving the chart's tpl pass.
+        config:
+          inline:
+            agents:
+              static:
+                qwen35-4b:
+                  cls_or_fn: ravnar.agents.PydanticAiAgentWrapper
+                  params:
+                    agent:
+                      cls_or_fn: pydantic_ai.Agent
+                      params:
+                        model:
+                          cls_or_fn: pydantic_ai.models.openai.OpenAIChatModel
+                          params:
+                            model_name: unsloth/Qwen3.5-4B-GGUF
+                            provider:
+                              cls_or_fn: pydantic_ai.providers.openai.OpenAIProvider
+                              params:
+                                base_url: https://llm.nebari.local/v1
+                                api_key: '{{ include "ravnar.env.templateLiteral" "LLM_QWEN35_4B_API_KEY" }}'
+                    capabilities:
+                      identity:
+                        name: "Qwen3.5 4B (cluster)"
+                        provider: "Nebari LLM Serving"
+                        description: "Qwen3.5-4B served on this cluster via the Nebari LLM serving gateway."
+                qwen36-35b:
+                  cls_or_fn: ravnar.agents.PydanticAiAgentWrapper
+                  params:
+                    agent:
+                      cls_or_fn: pydantic_ai.Agent
+                      params:
+                        model:
+                          cls_or_fn: pydantic_ai.models.openai.OpenAIChatModel
+                          params:
+                            model_name: ggml-org/Qwen3.6-35B-A3B-GGUF
+                            provider:
+                              cls_or_fn: pydantic_ai.providers.openai.OpenAIProvider
+                              params:
+                                base_url: https://llm.nebari.local/v1
+                                api_key: '{{ include "ravnar.env.templateLiteral" "LLM_QWEN36_35B_API_KEY" }}'
+                    capabilities:
+                      identity:
+                        name: "Qwen3.6 35B A3B (cluster)"
+                        provider: "Nebari LLM Serving"
+                        description: "Qwen3.6-35B-A3B (MoE) served on this cluster via the Nebari LLM serving gateway."
           extraVolumes:
             - name: nebari-ca
               configMap:
