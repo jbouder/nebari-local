@@ -124,7 +124,9 @@ curl -sk https://llm.nebari.local/v1/chat/completions \
 > patches every existing model route to 600s — but the patch only sticks
 > until the next LLMModel reconcile rebuilds the routes, and routes for a
 > model only exist once it's Ready. **Re-run the script after a model
-> becomes Ready or after any LLMModel spec change.** Upstream fix: the
+> becomes Ready, after any LLMModel spec change, or after a cluster
+> stop/start (`docker stop/start nebari-local-control-plane`) — the
+> operator's restart reconcile rebuilds all routes and wipes the patch.** Upstream fix: the
 > operator should set generous route timeouts (or expose them on the CRD).
 
 > **Known upstream bug (nebari-llm-serving-pack operator):** every LLMModel
