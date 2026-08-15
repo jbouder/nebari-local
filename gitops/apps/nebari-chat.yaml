@@ -55,6 +55,14 @@ spec:
                 secretKeyRef:
                   name: nebari-chat-llm-api-keys
                   key: qwen3-6-35b-a3b
+          extraVolumes:
+            - name: nebari-ca
+              configMap:
+                name: nebari-local-ca-bundle
+          extraVolumeMounts:
+            - name: nebari-ca
+              mountPath: /etc/ssl/nebari
+              readOnly: true
 
         # Static agents backed by the cluster's own LLM-serving models,
         # reached through the external AI-gateway endpoint (the internal one
@@ -106,14 +114,6 @@ spec:
                         name: "Qwen3.6 35B A3B (cluster)"
                         provider: "Nebari LLM Serving"
                         description: "Qwen3.6-35B-A3B (MoE) served on this cluster via the Nebari LLM serving gateway."
-          extraVolumes:
-            - name: nebari-ca
-              configMap:
-                name: nebari-local-ca-bundle
-          extraVolumeMounts:
-            - name: nebari-ca
-              mountPath: /etc/ssl/nebari
-              readOnly: true
 
         backend:
           nebariapp:
