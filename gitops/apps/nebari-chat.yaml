@@ -131,6 +131,16 @@ spec:
         frontend:
           image:
             tag: "0.0.15"
+          # The pr.189 chart defaults to uid 65532, but the stable 0.0.15
+          # image still runs as uid 1000 (/tmp/nginx and config.json are
+          # 1000-owned, so 65532 crashloops on "permission denied"). Drop
+          # when chart+image releases align again.
+          securityContext:
+            pod:
+              runAsUser: 1000
+              runAsGroup: 1000
+              fsGroup: 1000
+              runAsNonRoot: true
           keycloak:
             # Browser-facing auth server URL
             authServerUrl: "https://keycloak.nebari.local"
