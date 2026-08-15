@@ -218,9 +218,13 @@ fi
 # reverts route timeouts.
 log "Chat-app LLM API keys"
 LLM_NS=nebari-llm-serving-system
-CID=svc-nebari-chat-1
 CHAT_KEY_ARGS=()
 for m in qwen3-5-4b qwen3-6-35b-a3b; do
+  # The clientID (data-key name) must be unique ACROSS models: the operator
+  # pools every model's Secret into one listener-wide apiKeyAuth credential
+  # set, and duplicated names collide (only one value survives, the other
+  # key fails authentication) — embed the model name.
+  CID="svc-nebari-chat-$m-1"
   if ! $KUBECTL -n "$LLM_NS" get secret "$m-api-keys" >/dev/null 2>&1; then
     echo "  $m-api-keys not created yet (operator pending) — re-run this script later"
     continue

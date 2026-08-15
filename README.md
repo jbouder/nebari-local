@@ -289,8 +289,10 @@ after a cluster recreate** (i.e. re-run the script):
    gateway with per-model `sk-` keys. The gateway authorizes exactly the
    data-key names of each model's `<model>-api-keys` Secret in
    `nebari-llm-serving-system`, so the script mints a key by writing
-   `svc-nebari-chat-1: sk-<random>` straight into that Secret (no
-   key-manager call) and mirrors it into
+   `svc-nebari-chat-<model>-1: sk-<random>` straight into that Secret (no
+   key-manager call; the clientID embeds the model name because the
+   operator pools all models' Secrets into one listener-wide credential
+   set where duplicate names collide) and mirrors it into
    `nebari-chat/nebari-chat-llm-api-keys` for the pod env. Keys activate in
    ~1 min; they won't show in the llm-keys UI (metadata ConfigMap wipe bug),
    but they work. The Secret write triggers an LLMModel reconcile, which is
