@@ -70,7 +70,7 @@ spec:
           # URL — the operator just stops advertising a tile for it.
           # Flip back to true to show it again.
           landingPage:
-            enabled: false
+            enabled: true
 
         seed:
           orgSlug: nebari-local
