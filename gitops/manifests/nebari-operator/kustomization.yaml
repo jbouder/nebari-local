@@ -3,12 +3,19 @@ kind: Kustomization
 
 namespace: nebari-operator-system
 
+# v0.1.0 (not alpha.20) for the NebariApp CRD's landingPage.iconDark/iconLight
+# fields, added in operator commit f7a2e9d — one commit past alpha.20, first
+# tagged in v0.1.0. The nebari-landing chart emits `iconDark: ""` on its
+# NebariApp CR unconditionally, and against the alpha.20 CRD that fails
+# ArgoCD's ServerSideApply diff with "field not declared in schema", which
+# blocks the whole landing-page sync. The CRD change is purely additive (two
+# optional strings), so existing NebariApp CRs stay valid.
 resources:
-  - https://github.com/nebari-dev/nebari-operator.git/config/default?ref=v0.1.0-alpha.20
+  - https://github.com/nebari-dev/nebari-operator.git/config/default?ref=v0.1.0
 images:
   - name: nebari-operator
     newName: quay.io/nebari/nebari-operator
-    newTag: 0.1.0-alpha.20
+    newTag: 0.1.0
 
 patches:
   - path: deployment-patch.yaml
