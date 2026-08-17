@@ -38,7 +38,7 @@ spec:
           oauth2Proxy:
             oidcIssuerUrl: "https://keycloak.nebari.local/realms/nebari"
 
-          # Iris & Teal palette, shared with the chat / llm-serving /
+          # Deep Blue & Teal palette, shared with the chat / llm-serving /
           # provenance packs and the jhub-apps hub theme. Rendered into
           # /config.json at deploy time — no image rebuild.
           #
@@ -50,21 +50,21 @@ spec:
           branding:
             theme:
               light:
-                primary: "#6D4AFF"
+                primary: "#1D4ED8"
                 primaryForeground: "#FFFFFF"
                 secondary: "#E6FAF7"
                 secondaryForeground: "#0F766E"
-                accent: "#EFEBFF"
-                accentForeground: "#4B2FC0"
-                ring: "#6D4AFF"
+                accent: "#E8EEFC"
+                accentForeground: "#1E3A8A"
+                ring: "#1D4ED8"
               dark:
-                primary: "#9B85FF"
-                primaryForeground: "#14101F"
+                primary: "#60A5FA"
+                primaryForeground: "#0B1220"
                 secondary: "#16332F"
                 secondaryForeground: "#7FE9DA"
-                accent: "#241E42"
-                accentForeground: "#C4B5FF"
-                ring: "#9B85FF"
+                accent: "#132039"
+                accentForeground: "#BFD4FE"
+                ring: "#60A5FA"
 
         webapi:
           keycloak:

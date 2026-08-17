@@ -145,7 +145,7 @@ spec:
             # Browser-facing auth server URL
             authServerUrl: "https://keycloak.nebari.local"
             realm: nebari
-          # Iris & Teal palette, shared with the landing / llm-serving /
+          # Deep Blue & Teal palette, shared with the landing / llm-serving /
           # provenance packs and the jhub-apps hub theme.
           #
           # This chart uses its own brand-token vocabulary (not the shadcn
@@ -155,14 +155,14 @@ spec:
           branding:
             theme:
               light:
-                bgBrandDefault: "#6D4AFF"
-                bdBrandDefault: "#5733E0"
-                bgBrandSecondary: "#EFEBFF"
+                bgBrandDefault: "#1D4ED8"
+                bdBrandDefault: "#1E3A8A"
+                bgBrandSecondary: "#E8EEFC"
                 textBrandOnBrand: "#FFFFFF"
               dark:
-                bgBrandDefault: "#6D4AFF"
-                bdBrandDefault: "#9B85FF"
-                bgBrandSecondary: "#241E42"
+                bgBrandDefault: "#1D4ED8"
+                bdBrandDefault: "#60A5FA"
+                bgBrandSecondary: "#132039"
                 textBrandOnBrand: "#FBFBFB"
           nebariapp:
             hostname: chat.nebari.local

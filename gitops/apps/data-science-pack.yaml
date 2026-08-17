@@ -124,7 +124,7 @@ spec:
               pvc:
                 storageClassName: standard
             extraConfig:
-              # Iris & Teal palette for the JupyterHub pages and the jhub-apps
+              # Deep Blue & Teal palette for the JupyterHub pages and the jhub-apps
               # launcher, matching the landing / chat / llm-serving /
               # provenance packs.
               #
@@ -148,13 +148,13 @@ spec:
                 from jhub_apps import themes
                 c.JupyterHub.template_vars = {
                     **themes.DEFAULT_THEME,
-                    "primary_color": "#6D4AFF",
-                    "primary_color_light": "#6D4AFF14",
-                    "primary_color_dark": "#5733E0",
+                    "primary_color": "#1D4ED8",
+                    "primary_color_light": "#1D4ED814",
+                    "primary_color_dark": "#1E3A8A",
                     "secondary_color": "#0F766E",
                     "secondary_color_dark": "#0B5C56",
-                    "accent_color": "#5733E0",
-                    "accent_color_dark": "#4526B8",
+                    "accent_color": "#1E3A8A",
+                    "accent_color_dark": "#172F6B",
                 }
 
   destination:

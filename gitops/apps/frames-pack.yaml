@@ -30,6 +30,13 @@ spec:
         nebariapp:
           enabled: true
           hostname: frames.nebari.local
+          # Hidden from the landing page, not removed: the NebariApp, its
+          # route, and its Keycloak client all stay in place, so
+          # https://frames.nebari.local keeps working for anyone with the
+          # URL — the operator just stops advertising a tile for it.
+          # Flip back to true to show it again.
+          landingPage:
+            enabled: false
 
         seed:
           orgSlug: nebari-local
