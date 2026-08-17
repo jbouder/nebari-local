@@ -94,7 +94,7 @@ NIC-owned apps; `nebari-apps` allows any source repo and any namespace:
 | Provenance Collector | https://provenance.nebari.local | Daily scan at 06:00; http persistence mode |
 | Apps | https://apps.nebari.local | Launch static/pixi web apps (UI + API + MCP at /mcp); apps serve at `<name>.apps.nebari.local` |
 | Harbor | https://harbor.nebari.local | OCI registry + Trivy scanning; "LOGIN VIA OIDC PROVIDER" (Keycloak) or `admin` with the harbor-admin secret |
-| Frames | https://frames.nebari.local | Context Frames registry + remote MCP endpoint (vendored chart at `gitops/charts/nebari-frames` — local CA addition) |
+| Frames | https://frames.nebari.local | Context Frames registry + remote MCP endpoint (vendored chart at `gitops/charts/nebari-frames` — local CA addition). **Hidden from the landing page** (`nebariapp.landingPage.enabled: false`); the NebariApp, route and Keycloak client all remain, so the URL still works |
 | LLM Serving | https://llm-keys.nebari.local | llm-d operator + API-key manager UI. **No GPUs** here, so GPU `LLMModel` CRs won't schedule (default serving image is CUDA-only). Prereqs installed alongside: Envoy AI Gateway v0.5.0 + GIE v1.5.0 CRDs, and the foundational envoy-gateway app carries AI-extension wiring |
 | ↳ CPU models | https://llm.nebari.local | Two CPU models (`gitops/manifests/llm-models/`) on llama.cpp's multi-arch server image — `gpu.count: 0` + `serving.command` override (`sh -c` swallows the operator's vLLM args). All models share `llm.nebari.local`, routed by the `model` field in the request body |
 
@@ -196,6 +196,86 @@ amd64 binaries either way):
      (`sha256:c18bcf8a8c70bc60425b9293d0bbea3da857ae39f2a16d2b8aaee2ca447c7668`)
    - `ghcr.io/nebari-dev/provenance-collector-pack/frontend:0.1.2`
      (`sha256:08c87115afef393f498220b8fe43c338a511798d6183527cfce9acbf3d92f9b9`)
+
+### Branding
+
+Every pack whose chart exposes a branding hook is set to one palette,
+"Deep Blue & Teal", rendered into each app's `/config.json` at deploy time —
+no image rebuilds:
+
+| Token | Light | Dark |
+|---|---|---|
+| primary | `#1D4ED8` | `#60A5FA` |
+| primary foreground | `#FFFFFF` | `#0B1220` |
+| secondary (surface / brand) | `#E6FAF7` / `#0F766E` | `#16332F` / `#7FE9DA` |
+| accent (surface / fg) | `#E8EEFC` / `#1E3A8A` | `#132039` / `#BFD4FE` |
+
+Configured in `gitops/apps/`: `nebari-landingpage`, `nebari-chat`,
+`llm-serving-pack`, `provenance-collector`, `apps-pack` (all under
+`frontend.branding` / `ui.branding`), plus `data-science-pack` for the
+JupyterHub + jhub-apps pages. Each chart uses a different token vocabulary —
+shadcn-style `primary`/`secondary`, chat's camelCase `bgBrandDefault`, and
+jhub-apps' snake_case `primary_color` — so the same palette is expressed three
+ways. Harbor, Frames and Keycloak expose no branding hook; Nebi's app supports
+it but its chart does not yet (nebi-pack#48).
+
+Four things that are easy to trip over:
+
+- **The landing page needs a manual restart after a branding-only edit.** It
+  mounts `config.json` with `subPath` and its Deployment carries no
+  `checksum/config` annotation, so kubelet never updates the file in place and
+  ArgoCD still reports `Synced/Healthy` while nginx serves the old colors:
+  ```bash
+  kubectl rollout restart deploy/nebari-landing-frontend -n nebari-system
+  ```
+  The llm-serving, provenance and apps-pack frontends *do* set
+  `checksum/config` and roll themselves — only the landing page needs this.
+
+- **`primaryHover` / `sidebarPrimary` / `sidebarRing` are undocumented
+  overrides.** The shadcn-based frontends hardcode `--primary-hover` (which
+  backs every button and badge hover) and the sidebar tokens to the old Nebari
+  magenta, where `primary` alone cannot reach. They apply because the runtime
+  applier kebab-cases whatever keys the JSON carries with no allowlist. Fixed
+  upstream in llm-serving-pack#169 and provenance-collector-pack#81 (merged),
+  with nebari-landing#200 open and the same fix in flight for apps-pack — drop
+  the overrides per pack once a release carrying the fix is deployed.
+
+- **jhub-apps has no light/dark split.** `get_theme()` returns a single palette
+  and `theme.css` emits it at `:root` with no `.dark` variant (still true in
+  2026.8.1 — `primary_color_dark` is a darker *shade*, not a dark-mode value).
+  No single blue satisfies both modes, so `primary_color` is set to the lighter
+  `#60A5FA` for dark-mode legibility (5.94:1 on the dark surface vs 2.25:1 for
+  blue-700). The cost: `hub.css` paints `.btn-primary` with the hardcoded,
+  non-themeable `--light-text-color`, so light-mode primary buttons sit near
+  2.4:1. Restore `#1D4ED8` in `data-science-pack.yaml` to trade back.
+
+- **Never point provenance-collector's frontend at the `main` tag.** That image
+  is built from `6d49f84` (2026-08-05) and is *older* than the `0.1.2` release
+  image (`b5a6448`, 2026-08-13), so it silently reverts the header restyle. This
+  pack publishes no per-commit `sha-` tags — `main`, `latest` and `0.1.2` are
+  the only ones, and `latest` == `0.1.2`. Use the chart default.
+
+### Deliberate version skew
+
+Two places run an image from a different revision than the chart pinned
+alongside it. Both are intentional; revisit when the upstream branches converge:
+
+- **`data-science-pack`** pins the chart to `feat/user-shared-volumes` (whose
+  hub image ships jhub-apps 2025.11.1) but overrides
+  `jupyterhub.hub.image.tag: sha-16c1922` from the pack's `main`, which ships
+  **jhub-apps 2026.7.1** — required for the profile-menu light/dark toggle. The
+  branch and `main` have diverged badly (32 commits one way, 72 the other,
+  including the nebi-envs stale-token fix), so switching the chart wholesale
+  would regress other things. Caveat: the singleuser image still pins
+  2025.11.1, so hub and singleuser are version-skewed — watch app spawning.
+
+- **`nebari-landingpage`** pins a `main` commit (`8b7042a`) rather than a
+  release tag, so its images float on `:latest`. That revision emits
+  `landingPage.iconDark` on its NebariApp CR, which **requires
+  nebari-operator >= v0.1.0** (`gitops/manifests/nebari-operator/`, bumped from
+  `v0.1.0-alpha.20`). On the older CRD, ArgoCD's ServerSideApply diff fails with
+  `field not declared in schema` and the whole app silently stops syncing while
+  still reporting healthy.
 
 ### In-cluster access to `*.nebari.local` (required for pack OIDC)
 
