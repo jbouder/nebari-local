@@ -11,8 +11,8 @@ spec:
   project: nebari-apps
 
   # Vendored copy of the upstream nebari-frames chart, tracking main at
-  # b8db7f5 (PR #56, runtime branding) rather than the v0.1.5 release — that
-  # release predates branding and there is no newer tag yet. One local
+  # 84cdd83 rather than the v0.1.5 release — that release predates branding
+  # and there is no newer tag yet. One local
   # addition on top: orgCABundle support, because the backend fails fast
   # fetching OIDC discovery from https://keycloak.nebari.local and the
   # upstream chart has no way to inject the gateway CA. Drop the vendored
@@ -30,7 +30,13 @@ spec:
           # Must be a main build, not v0.1.5: the Go server is what serves
           # /config.json, so branding needs the backend from the same commit
           # as the vendored chart.
-          tag: "sha-b8db7f5@sha256:53878b9ad08af8c021bed2fb092edde974537b1c74a22472d40952bc3696e602"
+          #
+          # 84cdd83 ("Header cleanup") is frontend-only — it rebuilds the
+          # header nav in web/src/components/layout/Header.tsx and touches no
+          # chart file, so the vendored chart from b8db7f5 is still current.
+          # The SPA is embedded in the Go binary, so header changes ship in
+          # this image and nowhere else.
+          tag: "sha-84cdd83@sha256:f9fe87bd92df3522c0bcf517f488c798cb7ea5ff0acd3703fda1437b5fab3bc6"
 
         # Deep Blue & Teal palette, shared with the landing / chat / provenance /
         # llm-serving / apps packs. Rendered into a ConfigMap and served by the

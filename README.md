@@ -93,7 +93,7 @@ NIC-owned apps; `nebari-apps` allows any source repo and any namespace:
 | Provenance Collector | https://provenance.nebari.local | Daily scan at 06:00; http persistence mode |
 | Apps | https://apps.nebari.local | Launch static/pixi web apps (UI + API + MCP at /mcp); apps serve at `<name>.apps.nebari.local` |
 | Harbor | https://harbor.nebari.local | OCI registry + Trivy scanning; "LOGIN VIA OIDC PROVIDER" (Keycloak) or `admin` with the harbor-admin secret |
-| Frames | https://frames.nebari.local | Context Frames registry + remote MCP endpoint (vendored chart at `gitops/charts/nebari-frames`, tracking upstream `main` at `b8db7f5` for runtime branding — v0.1.5 predates it — plus the local CA addition). **Hidden from the landing page** (`nebariapp.landingPage.enabled: false`); the NebariApp, route and Keycloak client all remain, so the URL still works |
+| Frames | https://frames.nebari.local | Context Frames registry + remote MCP endpoint (vendored chart at `gitops/charts/nebari-frames`, tracking upstream `main` — v0.1.5 predates runtime branding — plus the local CA addition). Chart is current as of `b8db7f5`; the image runs `84cdd83` |
 | LLM Serving | https://llm-keys.nebari.local | llm-d operator + API-key manager UI. **No GPUs** here, so GPU `LLMModel` CRs won't schedule (default serving image is CUDA-only). Operator, key-manager and frontend images all run ahead of the 0.1.3 chart at `sha-4cfb58c` (see [Deliberate version skew](#deliberate-version-skew)). Prereqs installed alongside: Envoy AI Gateway v0.5.0 + GIE v1.5.0 CRDs, and the foundational envoy-gateway app carries AI-extension wiring |
 | ↳ CPU models | https://llm.nebari.local | Two CPU models (`gitops/manifests/llm-models/`) on llama.cpp's multi-arch server image — `gpu.count: 0` + `serving.command` override (`sh -c` swallows the operator's vLLM args). All models share `llm.nebari.local`, routed by the `model` field in the request body |
 
@@ -285,12 +285,20 @@ or a release carries the fix:
   therefore lag its operator — see the `requestTimeout` note above for the one
   place that matters.
 
-- **`frames-pack`** vendors the chart from `main` (`b8db7f5`) rather than the
-  `v0.1.5` tag, and pins the image to the *same* commit. Runtime branding
-  (nebari-frames#56) is unreleased, and it spans both halves: the chart renders
-  the ConfigMap, but it's the Go server — not nginx — that serves `/config.json`,
-  so a v0.1.5 image with the main chart would mount the config and ignore it.
-  Keep chart and image on one commit when re-vendoring.
+- **`frames-pack`** vendors the chart from `main` rather than the `v0.1.5` tag,
+  and tracks `main` for the image too. Runtime branding (nebari-frames#56) is
+  unreleased, and it spans both halves: the chart renders the ConfigMap, but
+  it's the Go server — not nginx — that serves `/config.json`, so a v0.1.5
+  image with the main chart would mount the config and ignore it.
+
+  Chart and image do *not* have to sit on the same commit — only on compatible
+  ones. The chart is current as of `b8db7f5`; the image runs `84cdd83`
+  ("Header cleanup"), which is frontend-only and touches no chart file. **The
+  SPA is embedded in the Go binary**, so every web change — header, nav,
+  branding applier — ships in the image and nowhere else: a UI change that
+  doesn't land is almost always a stale image pin, not a chart problem. When
+  re-vendoring, check `git diff <old> <new> -- chart/` and only re-copy when
+  it's non-empty.
 
 - **`nebari-landingpage`** pins a `main` commit (`8b7042a`) rather than a
   release tag, so its images float on `:latest`. That revision emits

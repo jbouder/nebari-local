@@ -1,10 +1,14 @@
 apiVersion: v2
-# Vendored from nebari-frames main at b8db7f5 (PR #56, runtime branding), which
-# is AHEAD of the v0.1.5 release — branding has not been released yet. The
-# prerelease version string records that provenance; re-stamp it to the plain
-# release version once a tag carrying branding exists upstream.
-appVersion: sha-b8db7f5
+# Vendored from nebari-frames main, which is AHEAD of the v0.1.5 release —
+# branding has not been released yet. The prerelease version string records
+# that provenance; re-stamp it to the plain release version once a tag carrying
+# branding exists upstream.
+#
+# The chart itself is unchanged since b8db7f5 (PR #56, runtime branding);
+# appVersion tracks the image commit, which has moved on to 84cdd83
+# ("Header cleanup", frontend-only).
+appVersion: sha-84cdd83
 description: Nebari Frames - single-binary Frames server (SPA + API) for Nebari
 name: nebari-frames
 type: application
-version: 0.1.6-main.b8db7f5
+version: 0.1.6-main.84cdd83
