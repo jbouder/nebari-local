@@ -145,6 +145,28 @@ spec:
             # Browser-facing auth server URL
             authServerUrl: "https://keycloak.nebari.local"
             realm: nebari
+          # Iris & Teal palette, shared with the landing / llm-serving /
+          # provenance packs and the jhub-apps hub theme.
+          #
+          # This chart uses its own brand-token vocabulary (not the shadcn
+          # primary/secondary set): camelCase keys are kebab-cased into CSS
+          # custom properties, so bgBrandDefault -> --bg-brand-default. See
+          # frontend/src/main.css for the full token list.
+          #
+          # No banners here: branding.banners does not exist in this chart,
+          # so the landing page carries the CUI markings on its own.
+          branding:
+            theme:
+              light:
+                bgBrandDefault: "#6D4AFF"
+                bdBrandDefault: "#5733E0"
+                bgBrandSecondary: "#EFEBFF"
+                textBrandOnBrand: "#FFFFFF"
+              dark:
+                bgBrandDefault: "#6D4AFF"
+                bdBrandDefault: "#9B85FF"
+                bgBrandSecondary: "#241E42"
+                textBrandOnBrand: "#FBFBFB"
           nebariapp:
             hostname: chat.nebari.local
 

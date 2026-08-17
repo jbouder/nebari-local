@@ -123,6 +123,45 @@ spec:
             db:
               pvc:
                 storageClassName: standard
+            extraConfig:
+              # Iris & Teal palette for the JupyterHub pages and the jhub-apps
+              # launcher, matching the landing / chat / llm-serving /
+              # provenance packs.
+              #
+              # Why extraConfig and not custom.japps-config: the pack hardcodes
+              # `c.JupyterHub.template_vars = themes.DEFAULT_THEME` in
+              # config/jupyterhub/02-jhub-apps.py, and the japps-config loop
+              # only sets attributes on c.JAppsConfig — it cannot reach
+              # template_vars. z2jh 4.3.2 execs hub.extraConfig *after* it
+              # loads jupyterhub_config.d/*.py (see files/hub/jupyterhub_config.py),
+              # so re-assigning here wins. The japps service re-reads the same
+              # config file at runtime, so it picks these up too.
+              #
+              # jhub-apps maps these snake_case theme vars onto CSS custom
+              # properties (THEME_CSS_VARIABLES in jhub_apps/service/utils.py):
+              # primary_color -> --primary-color, and so on. primary_color_light
+              # is an 8-digit hex with alpha, matching the #BA18DA10 default.
+              #
+              # Light mode only: dark-mode hub theming needs jhub-apps >= 2026.7.1
+              # and this hub image pins 2025.11.1.
+              #
+              # NO BANNERS HERE: c.JAppsConfig.banners requires jhub-apps
+              # >= 2026.8.1 (added 2026-08-10). This image ships 2025.11.1, and
+              # even data-science-pack main only pins 2026.7.1, so setting it
+              # would be a silent no-op. Add the CUI banners once the hub image
+              # carries 2026.8.1+.
+              01-nebari-branding: |
+                from jhub_apps import themes
+                c.JupyterHub.template_vars = {
+                    **themes.DEFAULT_THEME,
+                    "primary_color": "#6D4AFF",
+                    "primary_color_light": "#6D4AFF14",
+                    "primary_color_dark": "#5733E0",
+                    "secondary_color": "#0F766E",
+                    "secondary_color_dark": "#0B5C56",
+                    "accent_color": "#5733E0",
+                    "accent_color_dark": "#4526B8",
+                }
 
   destination:
     server: https://kubernetes.default.svc

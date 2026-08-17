@@ -37,6 +37,35 @@ spec:
           keycloak:
             # Browser-facing URL used by the SPA's in-browser OIDC login.
             url: https://keycloak.nebari.local
+          # Iris & Teal palette, shared with the landing / chat / llm-serving
+          # packs and the jhub-apps hub theme. Rendered into /config.json at
+          # deploy time — no image rebuild.
+          #
+          # NOTE on `secondary`: this chart's default is a near-white neutral
+          # *surface* token with dark text, not a brand fill, so secondary
+          # carries a teal tint and the saturated teal sits on
+          # secondaryForeground. Chart default primary is the old Nebari
+          # magenta, oklch(55.06% 0.1886 311.45).
+          #
+          # No banners here: branding.banners does not exist in this chart.
+          branding:
+            theme:
+              light:
+                primary: "#6D4AFF"
+                primaryForeground: "#FFFFFF"
+                secondary: "#E6FAF7"
+                secondaryForeground: "#0F766E"
+                accent: "#EFEBFF"
+                accentForeground: "#4B2FC0"
+                ring: "#6D4AFF"
+              dark:
+                primary: "#9B85FF"
+                primaryForeground: "#14101F"
+                secondary: "#16332F"
+                secondaryForeground: "#7FE9DA"
+                accent: "#241E42"
+                accentForeground: "#C4B5FF"
+                ring: "#9B85FF"
 
         webUI:
           enabled: true

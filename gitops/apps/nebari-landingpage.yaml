@@ -15,7 +15,12 @@ spec:
 
   source:
     repoURL: https://github.com/nebari-dev/nebari-landing
-    targetRevision: v0.1.0-alpha.5
+    # Pinned to a main commit rather than a release tag: frontend.branding.banners
+    # (the CUI markings configured below) exists only on main — every tag through
+    # v0.1.4 ships branding.theme but not branding.banners. Note that main's
+    # Chart.yaml sets appVersion "latest", so the frontend/webapi images float to
+    # main's newest build. Move back to a tag once a release includes banners.
+    targetRevision: 8b7042a
     path: charts/nebari-landing
     helm:
       releaseName: nebari-landing
@@ -27,6 +32,45 @@ spec:
             realm: "nebari"
           oauth2Proxy:
             oidcIssuerUrl: "https://keycloak.nebari.local/realms/nebari"
+
+          # Iris & Teal palette, shared with the chat / llm-serving /
+          # provenance packs and the jhub-apps hub theme. Rendered into
+          # /config.json at deploy time — no image rebuild.
+          #
+          # NOTE on `secondary`: in this shadcn token set `secondary` is a
+          # neutral *surface* (chart default is near-white) paired with dark
+          # text, not a brand fill. Full-strength teal there would leave
+          # every bg-secondary control at ~2.5:1. So secondary carries a
+          # teal *tint* and the saturated teal lives on secondaryForeground.
+          branding:
+            theme:
+              light:
+                primary: "#6D4AFF"
+                primaryForeground: "#FFFFFF"
+                secondary: "#E6FAF7"
+                secondaryForeground: "#0F766E"
+                accent: "#EFEBFF"
+                accentForeground: "#4B2FC0"
+                ring: "#6D4AFF"
+              dark:
+                primary: "#9B85FF"
+                primaryForeground: "#14101F"
+                secondary: "#16332F"
+                secondaryForeground: "#7FE9DA"
+                accent: "#241E42"
+                accentForeground: "#C4B5FF"
+                ring: "#9B85FF"
+            # Full-width CUI markings above the header and below the page
+            # content. A banner is disabled while its text is empty.
+            banners:
+              top:
+                text: "CUI"
+                background: "#502B85"
+                foreground: "#FFFFFF"
+              bottom:
+                text: "CUI"
+                background: "#502B85"
+                foreground: "#FFFFFF"
 
         webapi:
           keycloak:
