@@ -10,12 +10,14 @@ metadata:
 spec:
   project: nebari-apps
 
-  # Vendored copy of the upstream nebari-frames chart 0.1.5 (from
-  # https://nebari-dev.github.io/helm-repository) with one local addition:
-  # orgCABundle support, because the backend fails fast fetching OIDC
-  # discovery from https://keycloak.nebari.local and the upstream chart has
-  # no way to inject the gateway CA. Drop the vendored copy once upstream
-  # grows extraEnv/extraVolumes or a CA option.
+  # Vendored copy of the upstream nebari-frames chart, tracking main at
+  # b8db7f5 (PR #56, runtime branding) rather than the v0.1.5 release — that
+  # release predates branding and there is no newer tag yet. One local
+  # addition on top: orgCABundle support, because the backend fails fast
+  # fetching OIDC discovery from https://keycloak.nebari.local and the
+  # upstream chart has no way to inject the gateway CA. Drop the vendored
+  # copy once upstream grows extraEnv/extraVolumes or a CA option; re-vendor
+  # from a tag once one carries branding.
   source:
     repoURL: file:///Users/johnnybouder/repos/nebari-local
     targetRevision: main
@@ -24,8 +26,40 @@ spec:
       releaseName: frames
       values: |
         image:
-          # amd64-only image pinned by digest for the arm64 kind node (Rosetta)
-          tag: "v0.1.5@sha256:7a149237b1a5651595554f1160cb60938a62bcf54b82303a2cb45493d02047ec"
+          # amd64-only image pinned by digest for the arm64 kind node (Rosetta).
+          # Must be a main build, not v0.1.5: the Go server is what serves
+          # /config.json, so branding needs the backend from the same commit
+          # as the vendored chart.
+          tag: "sha-b8db7f5@sha256:53878b9ad08af8c021bed2fb092edde974537b1c74a22472d40952bc3696e602"
+
+        # Deep Blue & Teal palette, shared with the landing / chat / provenance /
+        # llm-serving / apps packs. Rendered into a ConfigMap and served by the
+        # backend at /config.json — no image rebuild. The chart stamps a
+        # checksum/config annotation, so the pod rolls itself on a
+        # branding-only edit (unlike the landing page).
+        #
+        # No primaryHover / ring overrides here: unlike the other shadcn packs,
+        # this frontend DERIVES --primary-hover (a 15% oklab darkening in light,
+        # 18% lightening in dark) and --ring from an overridden --primary, so
+        # setting primary alone keeps hover and focus states on-brand.
+        # title / logoUrl / faviconUrl are left unset — the built-in Nebari
+        # wordmark and favicon are what we want here.
+        branding:
+          theme:
+            light:
+              primary: "#1D4ED8"
+              primaryForeground: "#FFFFFF"
+              secondary: "#E6FAF7"
+              secondaryForeground: "#0F766E"
+              accent: "#E8EEFC"
+              accentForeground: "#1E3A8A"
+            dark:
+              primary: "#60A5FA"
+              primaryForeground: "#0B1220"
+              secondary: "#16332F"
+              secondaryForeground: "#7FE9DA"
+              accent: "#132039"
+              accentForeground: "#BFD4FE"
 
         nebariapp:
           enabled: true

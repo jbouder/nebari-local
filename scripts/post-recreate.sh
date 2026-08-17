@@ -213,9 +213,7 @@ fi
 # Secret, so writing a key there directly both authenticates (pooled
 # credentialRefs) and authorizes (x-llm-client-id match) — no key-manager
 # API call needed. The key is mirrored into a nebari-chat-namespace secret
-# for the pod env (cross-namespace secretKeyRef is impossible). Runs before
-# the timeout step: the Secret write triggers the LLMModel reconcile that
-# reverts route timeouts.
+# for the pod env (cross-namespace secretKeyRef is impossible).
 log "Chat-app LLM API keys"
 LLM_NS=nebari-llm-serving-system
 CHAT_KEY_ARGS=()
@@ -250,29 +248,14 @@ if [ ${#CHAT_KEY_ARGS[@]} -gt 0 ]; then
 fi
 
 # ------------------------------------------------- 8. llm route timeouts
-# ai-gateway defaults LLM routes to 60s; CPU generations exceed that.
-# Patch sticks until the LLMModel spec changes. Routes appear only once a
-# model is Ready, so patch whatever exists and report what's still pending.
-log "LLM route timeouts (600s)"
-MODELS=$($KUBECTL -n nebari-llm-serving-system get llmmodels \
-  -o jsonpath='{.items[*].metadata.name}' 2>/dev/null || true)
-for m in $MODELS; do
-  for r in "$m-internal" "$m-external"; do
-    if ! $KUBECTL -n nebari-llm-serving-system get aigatewayroute "$r" >/dev/null 2>&1; then
-      echo "  $r: not created yet (model not Ready) — re-run this script later"
-      continue
-    fi
-    CUR=$($KUBECTL -n nebari-llm-serving-system get aigatewayroute "$r" \
-      -o jsonpath='{.spec.rules[0].timeouts.request}')
-    if [ "$CUR" = "600s" ]; then
-      echo "  $r: already 600s"
-    else
-      $KUBECTL -n nebari-llm-serving-system patch aigatewayroute "$r" --type=json \
-        -p '[{"op":"add","path":"/spec/rules/0/timeouts","value":{"request":"600s"}}]' >/dev/null
-      echo "  $r: patched to 600s"
-    fi
-  done
-done
+# REMOVED. This step used to patch every AIGatewayRoute to request: 600s,
+# because ai-gateway defaults LLM routes to 60s and CPU generations exceed
+# that — and it had to be re-run after every LLMModel reconcile, which
+# rebuilt the routes and wiped the patch. The operator now sets the timeout
+# itself (nebari-llm-serving-pack#168, in the sha-4cfb58c image pinned by
+# gitops/apps/llm-serving-pack.yaml): it stamps spec.endpoints.requestTimeout,
+# defaulting to 600s, onto both generated routes on every reconcile. Nothing
+# left to patch here.
 
 log "Done. Remaining manual (sudo) steps — run in your own terminal:"
 cat <<EOF

@@ -36,9 +36,8 @@ From zero to a browsable cluster (each step is detailed in the sections below):
    all software packs).
 3. **Run the post-recreate script** — automates every out-of-band piece
    (CoreDNS rewrite, out-of-band secrets, CA-bundle ConfigMaps, amd64 image
-   retags, Keycloak live bits, envoy extproc restart, chat-app LLM API keys,
-   LLM route timeouts).
-   Idempotent; re-run it any time (e.g. after an LLM model becomes Ready):
+   retags, Keycloak live bits, envoy extproc restart, chat-app LLM API keys).
+   Idempotent; re-run it any time:
    ```bash
    ./scripts/post-recreate.sh
    ```
@@ -94,8 +93,8 @@ NIC-owned apps; `nebari-apps` allows any source repo and any namespace:
 | Provenance Collector | https://provenance.nebari.local | Daily scan at 06:00; http persistence mode |
 | Apps | https://apps.nebari.local | Launch static/pixi web apps (UI + API + MCP at /mcp); apps serve at `<name>.apps.nebari.local` |
 | Harbor | https://harbor.nebari.local | OCI registry + Trivy scanning; "LOGIN VIA OIDC PROVIDER" (Keycloak) or `admin` with the harbor-admin secret |
-| Frames | https://frames.nebari.local | Context Frames registry + remote MCP endpoint (vendored chart at `gitops/charts/nebari-frames` — local CA addition). **Hidden from the landing page** (`nebariapp.landingPage.enabled: false`); the NebariApp, route and Keycloak client all remain, so the URL still works |
-| LLM Serving | https://llm-keys.nebari.local | llm-d operator + API-key manager UI. **No GPUs** here, so GPU `LLMModel` CRs won't schedule (default serving image is CUDA-only). Prereqs installed alongside: Envoy AI Gateway v0.5.0 + GIE v1.5.0 CRDs, and the foundational envoy-gateway app carries AI-extension wiring |
+| Frames | https://frames.nebari.local | Context Frames registry + remote MCP endpoint (vendored chart at `gitops/charts/nebari-frames`, tracking upstream `main` at `b8db7f5` for runtime branding — v0.1.5 predates it — plus the local CA addition). **Hidden from the landing page** (`nebariapp.landingPage.enabled: false`); the NebariApp, route and Keycloak client all remain, so the URL still works |
+| LLM Serving | https://llm-keys.nebari.local | llm-d operator + API-key manager UI. **No GPUs** here, so GPU `LLMModel` CRs won't schedule (default serving image is CUDA-only). Operator, key-manager and frontend images all run ahead of the 0.1.3 chart at `sha-4cfb58c` (see [Deliberate version skew](#deliberate-version-skew)). Prereqs installed alongside: Envoy AI Gateway v0.5.0 + GIE v1.5.0 CRDs, and the foundational envoy-gateway app carries AI-extension wiring |
 | ↳ CPU models | https://llm.nebari.local | Two CPU models (`gitops/manifests/llm-models/`) on llama.cpp's multi-arch server image — `gpu.count: 0` + `serving.command` override (`sh -c` swallows the operator's vLLM args). All models share `llm.nebari.local`, routed by the `model` field in the request body |
 
 Current models (both thinking models — append ` /no_think` to prompts or
@@ -135,28 +134,29 @@ curl -sk https://llm.nebari.local/v1/chat/completions \
 > SecurityPolicy's JWKS URI — the operator reconciles it back on every
 > api-key Secret change.
 
-> **Route timeout needs a live patch per model.** The ai-gateway controller
-> translates each model's AIGatewayRoutes into HTTPRoutes with a default
-> `request: 60s` timeout, and the operator doesn't override it for LLMModels
-> (it sets 120s for passthrough models only). CPU inference easily exceeds
-> 60s on long/thinking generations — streams die mid-token and apollo shows
-> "The agent could not complete the model request". `post-recreate.sh`
-> patches every existing model route to 600s — but the patch only sticks
-> until the next LLMModel reconcile rebuilds the routes, and routes for a
-> model only exist once it's Ready. **Re-run the script after a model
-> becomes Ready, after any LLMModel spec change, or after a cluster
-> stop/start (`docker stop/start nebari-local-control-plane`) — the
-> operator's restart reconcile rebuilds all routes and wipes the patch.** Upstream fix: the
-> operator should set generous route timeouts (or expose them on the CRD).
+> **Route timeouts are now the operator's job** (fixed upstream in
+> nebari-llm-serving-pack#168, carried by the `sha-4cfb58c` operator image
+> pinned in `gitops/apps/llm-serving-pack.yaml`). The ai-gateway controller
+> renders LLM routes with a default `request: 60s`, which CPU inference
+> exceeds on long/thinking generations — streams died mid-token and apollo
+> showed "The agent could not complete the model request". The operator now
+> stamps `spec.endpoints.requestTimeout` (default `600s`) onto both generated
+> AIGatewayRoutes on every reconcile, so the old `post-recreate.sh` patch loop
+> is gone and there is nothing to re-apply after a model becomes Ready, an
+> LLMModel spec change, or a cluster stop/start.
+>
+> Don't set `spec.endpoints.requestTimeout` on the `LLMModel` CRs: #168 also
+> added that field to the CRD, but chart **0.1.3 ships the pre-#168 CRD**, so
+> the field doesn't exist in-cluster. The operator's own `DefaultRequestTimeout`
+> ("600s") applies when it's empty, which is the value we want anyway. Revisit
+> when a chart release carrying the new CRD lands.
 
-> **Known upstream bug (nebari-llm-serving-pack operator):** every LLMModel
-> reconcile wipes the `<model>-api-key-metadata` ConfigMap
-> (`createOrUpdateConfigMap` sets `Data` from a desired object built with
-> nil Data — unlike the Secret path, which preserves data). Since key
-> creation itself updates the api-keys Secret and triggers a reconcile,
-> key metadata vanishes right after minting and the llm-keys UI lists no
-> keys ("keys don't persist"). The key credentials themselves survive in
-> the `<model>-api-keys` Secret and keep working.
+> **API-key metadata survives reconciles** as of nebari-llm-serving-pack#166
+> (same `sha-4cfb58c` image). Previously every LLMModel reconcile wiped the
+> `<model>-api-key-metadata` ConfigMap, so keys vanished from the llm-keys UI
+> the moment they were minted (key creation writes the api-keys Secret, which
+> triggers a reconcile) even though the credentials kept working. The
+> reconciler now preserves that ConfigMap's data and manages only its labels.
 
 Local-cluster conventions used in these manifests: backend OIDC calls go to
 the in-cluster Keycloak service
@@ -212,12 +212,12 @@ no image rebuilds:
 
 Configured in `gitops/apps/`: `nebari-landingpage`, `nebari-chat`,
 `llm-serving-pack`, `provenance-collector`, `apps-pack` (all under
-`frontend.branding` / `ui.branding`), plus `data-science-pack` for the
-JupyterHub + jhub-apps pages. Each chart uses a different token vocabulary —
-shadcn-style `primary`/`secondary`, chat's camelCase `bgBrandDefault`, and
-jhub-apps' snake_case `primary_color` — so the same palette is expressed three
-ways. Harbor, Frames and Keycloak expose no branding hook; Nebi's app supports
-it but its chart does not yet (nebi-pack#48).
+`frontend.branding` / `ui.branding`), `frames-pack` (top-level `branding`),
+plus `data-science-pack` for the JupyterHub + jhub-apps pages. Each chart uses a
+different token vocabulary — shadcn-style `primary`/`secondary`, chat's
+camelCase `bgBrandDefault`, and jhub-apps' snake_case `primary_color` — so the
+same palette is expressed three ways. Harbor and Keycloak expose no branding
+hook; Nebi's app supports it but its chart does not yet (nebi-pack#48).
 
 Four things that are easy to trip over:
 
@@ -242,6 +242,12 @@ Four things that are easy to trip over:
   widest: `--primary-hover` backs six components there (button, badge, switch,
   slider, checkbox, radio-group), not just button and badge.
 
+  **Frames is the exception** — the applier added in nebari-frames#56 *derives*
+  `--primary-hover` (a 15% oklab darkening in light, 18% lightening in dark) and
+  `--ring` from an overridden `--primary`, so `frames-pack.yaml` sets the six
+  palette tokens and nothing else. This is the shape the other packs are moving
+  toward; use it as the reference when their fixes ship.
+
 - **jhub-apps has no light/dark split.** `get_theme()` returns a single palette
   and `theme.css` emits it at `:root` with no `.dark` variant (still true in
   2026.8.1 — `primary_color_dark` is a darker *shade*, not a dark-mode value).
@@ -259,8 +265,9 @@ Four things that are easy to trip over:
 
 ### Deliberate version skew
 
-Two places run an image from a different revision than the chart pinned
-alongside it. Both are intentional; revisit when the upstream branches converge:
+Several places run an image from a different revision than the chart pinned
+alongside it. All are intentional; revisit when the upstream branches converge
+or a release carries the fix:
 
 - **`data-science-pack`** pins the chart to `feat/user-shared-volumes` (whose
   hub image ships jhub-apps 2025.11.1) but overrides
@@ -270,6 +277,20 @@ alongside it. Both are intentional; revisit when the upstream branches converge:
   including the nebi-envs stale-token fix), so switching the chart wholesale
   would regress other things. Caveat: the singleuser image still pins
   2025.11.1, so hub and singleuser are version-skewed — watch app spawning.
+
+- **`llm-serving-pack`** keeps the chart at the `0.1.3` release but pins all
+  three images (operator, key-manager, frontend) to `sha-4cfb58c` from `main`,
+  for #166 (api-key metadata no longer wiped), #168 (operator-set route
+  timeouts) and #169 (branding-derived hover/sidebar tokens). The chart's CRDs
+  therefore lag its operator — see the `requestTimeout` note above for the one
+  place that matters.
+
+- **`frames-pack`** vendors the chart from `main` (`b8db7f5`) rather than the
+  `v0.1.5` tag, and pins the image to the *same* commit. Runtime branding
+  (nebari-frames#56) is unreleased, and it spans both halves: the chart renders
+  the ConfigMap, but it's the Go server — not nginx — that serves `/config.json`,
+  so a v0.1.5 image with the main chart would mount the config and ignore it.
+  Keep chart and image on one commit when re-vendoring.
 
 - **`nebari-landingpage`** pins a `main` commit (`8b7042a`) rather than a
   release tag, so its images float on `:latest`. That revision emits
@@ -396,9 +417,10 @@ after a cluster recreate** (i.e. re-run the script):
    operator pools all models' Secrets into one listener-wide credential
    set where duplicate names collide) and mirrors it into
    `nebari-chat/nebari-chat-llm-api-keys` for the pod env. Keys activate in
-   ~1 min; they won't show in the llm-keys UI (metadata ConfigMap wipe bug),
-   but they work. The Secret write triggers an LLMModel reconcile, which is
-   why this step runs before the route-timeout patches.
+   ~1 min. They still won't show in the llm-keys UI — that's expected here,
+   since the script writes the Secret directly and never calls the key-manager
+   that populates the metadata ConfigMap; keys minted *through* the UI do
+   persist now (#166).
 
 ArgoCD polls the `file://` repo on an interval; to pick up a new commit
 immediately:

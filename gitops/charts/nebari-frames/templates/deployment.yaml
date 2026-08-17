@@ -14,6 +14,13 @@ spec:
       {{- include "nebari-frames.selectorLabels" . | nindent 6 }}
   template:
     metadata:
+      {{- if include "nebari-frames.hasBranding" . }}
+      annotations:
+        # Roll the pod when the runtime config changes: the app reads the mounted
+        # document once at startup, so without this a config-only upgrade would
+        # leave the old values being served.
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+      {{- end }}
       labels:
         {{- include "nebari-frames.selectorLabels" . | nindent 8 }}
     spec:
@@ -47,6 +54,10 @@ spec:
             - name: FRAMES_PUBLIC_URL
               value: {{ $mcpURL | quote }}
             {{- end }}
+            {{- end }}
+            {{- if include "nebari-frames.hasBranding" . }}
+            - name: BRANDING_CONFIG_FILE
+              value: {{ include "nebari-frames.configFilePath" . | quote }}
             {{- end }}
             {{- if .Values.seed.orgSlug }}
             - name: SEED_ORG_SLUG
@@ -104,11 +115,16 @@ spec:
               path: /readyz
               port: http
             periodSeconds: 10
-          {{- if or .Values.persistence.enabled .Values.orgCABundle.configMapName }}
+          {{- if or .Values.persistence.enabled (include "nebari-frames.hasBranding" .) .Values.orgCABundle.configMapName }}
           volumeMounts:
             {{- if .Values.persistence.enabled }}
             - name: data
               mountPath: {{ .Values.persistence.mountPath }}
+            {{- end }}
+            {{- if include "nebari-frames.hasBranding" . }}
+            - name: config
+              mountPath: {{ include "nebari-frames.configMountPath" . | quote }}
+              readOnly: true
             {{- end }}
             {{- if .Values.orgCABundle.configMapName }}
             - name: org-ca
@@ -118,12 +134,17 @@ spec:
           {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
-      {{- if or .Values.persistence.enabled .Values.orgCABundle.configMapName }}
+      {{- if or .Values.persistence.enabled (include "nebari-frames.hasBranding" .) .Values.orgCABundle.configMapName }}
       volumes:
         {{- if .Values.persistence.enabled }}
         - name: data
           persistentVolumeClaim:
             claimName: {{ include "nebari-frames.fullname" . }}-data
+        {{- end }}
+        {{- if include "nebari-frames.hasBranding" . }}
+        - name: config
+          configMap:
+            name: {{ include "nebari-frames.configMapName" . }}
         {{- end }}
         {{- if .Values.orgCABundle.configMapName }}
         - name: org-ca
