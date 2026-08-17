@@ -46,8 +46,6 @@ spec:
           # carries a teal tint and the saturated teal sits on
           # secondaryForeground. Chart default primary is the old Nebari
           # magenta, oklch(55.06% 0.1886 311.45).
-          #
-          # No banners here: branding.banners does not exist in this chart.
           branding:
             theme:
               light:

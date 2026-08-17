@@ -152,9 +152,6 @@ spec:
           # primary/secondary set): camelCase keys are kebab-cased into CSS
           # custom properties, so bgBrandDefault -> --bg-brand-default. See
           # frontend/src/main.css for the full token list.
-          #
-          # No banners here: branding.banners does not exist in this chart,
-          # so the landing page carries the CUI markings on its own.
           branding:
             theme:
               light:

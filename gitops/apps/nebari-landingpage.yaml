@@ -15,11 +15,16 @@ spec:
 
   source:
     repoURL: https://github.com/nebari-dev/nebari-landing
-    # Pinned to a main commit rather than a release tag: frontend.branding.banners
-    # (the CUI markings configured below) exists only on main — every tag through
-    # v0.1.4 ships branding.theme but not branding.banners. Note that main's
-    # Chart.yaml sets appVersion "latest", so the frontend/webapi images float to
-    # main's newest build. Move back to a tag once a release includes banners.
+    # Deliberately pinned to a main commit rather than a release tag, to stay
+    # current with main's landing-page fixes. Trade-off: main's Chart.yaml sets
+    # appVersion "latest", so the frontend/webapi images float to main's newest
+    # build on every sync rather than staying on pinned release builds. Move to
+    # a release tag if you want reproducible images back — branding.theme (set
+    # below) is supported on the tags too.
+    #
+    # Note this revision also requires nebari-operator >= v0.1.0: the chart on
+    # main emits landingPage.iconDark on its NebariApp CR, which the
+    # v0.1.0-alpha.20 CRD did not declare (see the operator kustomization).
     targetRevision: 8b7042a
     path: charts/nebari-landing
     helm:
@@ -60,17 +65,6 @@ spec:
                 accent: "#241E42"
                 accentForeground: "#C4B5FF"
                 ring: "#9B85FF"
-            # Full-width CUI markings above the header and below the page
-            # content. A banner is disabled while its text is empty.
-            banners:
-              top:
-                text: "CUI"
-                background: "#502B85"
-                foreground: "#FFFFFF"
-              bottom:
-                text: "CUI"
-                background: "#502B85"
-                foreground: "#FFFFFF"
 
         webapi:
           keycloak:
