@@ -47,6 +47,15 @@ spec:
           # text, not a brand fill. Full-strength teal there would leave
           # every bg-secondary control at ~2.5:1. So secondary carries a
           # teal *tint* and the saturated teal lives on secondaryForeground.
+          #
+          # primaryHover / sidebarRing are NOT in the chart's
+          # documented token list, but they are real purple (oklch hue ~311)
+          # defaults in the frontend's index.css that `primary` alone does not
+          # reach — primaryHover drives every button and badge hover state.
+          # They work because the runtime applier kebab-cases whatever keys the
+          # JSON carries with no allowlist (ThemeTokens is a compile-time type
+          # only), and the chart passes the theme map straight through toJson.
+          # Undocumented, so re-check after a frontend bump.
           branding:
             theme:
               light:
@@ -57,6 +66,8 @@ spec:
                 accent: "#E8EEFC"
                 accentForeground: "#1E3A8A"
                 ring: "#1D4ED8"
+                primaryHover: "#1E3A8A"
+                sidebarRing: "#1D4ED8"
               dark:
                 primary: "#60A5FA"
                 primaryForeground: "#0B1220"
@@ -65,6 +76,8 @@ spec:
                 accent: "#132039"
                 accentForeground: "#BFD4FE"
                 ring: "#60A5FA"
+                primaryHover: "#93C5FD"
+                sidebarRing: "#60A5FA"
 
         webapi:
           keycloak:

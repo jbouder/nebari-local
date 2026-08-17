@@ -46,6 +46,15 @@ spec:
           # carries a teal tint and the saturated teal sits on
           # secondaryForeground. Chart default primary is the old Nebari
           # magenta, oklch(55.06% 0.1886 311.45).
+          #
+          # primaryHover / sidebarPrimary / sidebarRing are NOT in the chart's
+          # documented token list, but they are real purple (oklch hue ~311)
+          # defaults in the frontend's index.css that `primary` alone does not
+          # reach — primaryHover drives every button and badge hover state.
+          # They work because the runtime applier kebab-cases whatever keys the
+          # JSON carries with no allowlist (ThemeTokens is a compile-time type
+          # only), and the chart passes the theme map straight through toJson.
+          # Undocumented, so re-check after a frontend bump.
           branding:
             theme:
               light:
@@ -56,6 +65,9 @@ spec:
                 accent: "#E8EEFC"
                 accentForeground: "#1E3A8A"
                 ring: "#1D4ED8"
+                primaryHover: "#1E3A8A"
+                sidebarPrimary: "#1D4ED8"
+                sidebarRing: "#1D4ED8"
               dark:
                 primary: "#60A5FA"
                 primaryForeground: "#0B1220"
@@ -64,6 +76,9 @@ spec:
                 accent: "#132039"
                 accentForeground: "#BFD4FE"
                 ring: "#60A5FA"
+                primaryHover: "#93C5FD"
+                sidebarPrimary: "#60A5FA"
+                sidebarRing: "#60A5FA"
 
         webUI:
           enabled: true
