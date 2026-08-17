@@ -15,7 +15,28 @@ spec:
   source:
     repoURL: https://nebari-dev.github.io/helm-repository
     chart: nebari-llm-serving
-    targetRevision: "0.1.4"
+    # 0.1.4 is tagged upstream but NOT PUBLISHED yet: the pack's "Release
+    # Chart" workflow doesn't push to the index, it opens a sync PR against
+    # nebari-dev/helm-repository, and #82 is still open. Setting 0.1.4 here
+    # makes ArgoCD fail to resolve the chart and stop syncing entirely
+    # ("ComparisonError: chart ... not found"), while still reporting Healthy
+    # because the live workloads are untouched — a silent stall.
+    #
+    # Upgrade once #82 merges (verify: the version appears under
+    # `entries.nebari-llm-serving` in the repo's index.yaml). Then:
+    #   - targetRevision: "0.1.4"
+    #   - repin all three images to sha-a8e74a3 (the 0.1.4 tag commit):
+    #       operator    sha256:1776a14bcbf5e70341a11db71b721c43428f60361adcd9f50b422922a3deaf16
+    #       keyManager  sha256:3f7c8839e087c319620ade6974a881e2620c205f4c003f3b9234a11f73000fe9
+    #       frontend    sha256:21fe47742b23a7c4b9ae3ebae82821c9c8c1699b26052d594c9339b9418fe6fb
+    #     Keep them digest-pinned: 0.1.4 defaults every tag to "latest", and
+    #     these images are amd64-only, so an unpinned tag won't platform-match
+    #     on the arm64 kind node.
+    #   - drop the "must NOT set requestTimeout" caveat below: 0.1.4 ships the
+    #     post-#168 CRD, so spec.endpoints.requestTimeout becomes settable.
+    # Nothing is lost by waiting — the sha-4cfb58c pins below already carry
+    # #166, #168 and #169.
+    targetRevision: "0.1.3"
     helm:
       releaseName: nebari-llm-serving
       values: |
@@ -60,7 +81,8 @@ spec:
         # chart 0.1.3 ships the pre-#168 CRD, so that field does not exist
         # in-cluster and must NOT be set on the LLMModel CRs. Not needed: the
         # operator falls back to its own DefaultRequestTimeout ("600s") when the
-        # field is empty, which is exactly the value we want.
+        # field is empty, which is exactly the value we want. (Chart 0.1.4 does
+        # ship the new CRD — see the targetRevision note above.)
         operator:
           image:
             tag: "sha-4cfb58c@sha256:7fd48441427e9ba6fa8c28c6429b45d7d7d81465dfac765b3376b6bb5c4e3458"

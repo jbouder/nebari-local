@@ -148,8 +148,23 @@ curl -sk https://llm.nebari.local/v1/chat/completions \
 > Don't set `spec.endpoints.requestTimeout` on the `LLMModel` CRs: #168 also
 > added that field to the CRD, but chart **0.1.3 ships the pre-#168 CRD**, so
 > the field doesn't exist in-cluster. The operator's own `DefaultRequestTimeout`
-> ("600s") applies when it's empty, which is the value we want anyway. Revisit
-> when a chart release carrying the new CRD lands.
+> ("600s") applies when it's empty, which is the value we want anyway. Chart
+> **0.1.4 does ship the new CRD** — lift this caveat when the pack moves to it.
+
+> **Chart `0.1.4` is tagged but not published.** The pack's "Release Chart"
+> workflow doesn't push to the index — it opens a sync PR against
+> `nebari-dev/helm-repository`, and #82 is still open. Pointing
+> `targetRevision` at an unpublished version makes ArgoCD fail to resolve the
+> chart and **stop syncing while still reporting `Healthy`**, since the live
+> workloads are untouched; the give-away is `Sync: Unknown` plus a
+> `ComparisonError` condition. Before bumping any pack's chart version, confirm
+> it actually exists:
+> ```bash
+> curl -s https://nebari-dev.github.io/helm-repository/index.yaml | \
+>   yq '.entries.nebari-llm-serving[].version'
+> ```
+> The upgrade steps for when it lands are written out in
+> `gitops/apps/llm-serving-pack.yaml`.
 
 > **API-key metadata survives reconciles** as of nebari-llm-serving-pack#166
 > (same `sha-4cfb58c` image). Previously every LLMModel reconcile wiped the
@@ -283,7 +298,9 @@ or a release carries the fix:
   for #166 (api-key metadata no longer wiped), #168 (operator-set route
   timeouts) and #169 (branding-derived hover/sidebar tokens). The chart's CRDs
   therefore lag its operator — see the `requestTimeout` note above for the one
-  place that matters.
+  place that matters. This skew closes when `0.1.4` is published (it contains
+  all three PRs); keep the images digest-pinned even then, since `0.1.4`
+  defaults every tag to `latest` and these images are amd64-only.
 
 - **`frames-pack`** vendors the chart from `main` rather than the `v0.1.5` tag,
   and tracks `main` for the image too. Runtime branding (nebari-frames#56) is
