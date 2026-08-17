@@ -160,19 +160,33 @@ spec:
               # primary_color -> --primary-color, and so on. primary_color_light
               # is an 8-digit hex with alpha, matching the #BA18DA10 default.
               #
-              # Light mode only: dark-mode hub theming needs jhub-apps >= 2026.7.1
-              # and this hub image pins 2025.11.1.
+              # ONE COLOR SET FOR BOTH MODES. Unlike the SPA packs, jhub-apps has
+              # no light/dark split for brand colors — get_theme() returns a
+              # single palette and theme.css emits it at :root with no `.dark`
+              # variant (still true in 2026.8.1; `primary_color_dark` is a darker
+              # *shade* for hover, not a dark-mode value). So this is a
+              # compromise, not a choice we get to make twice.
+              #
+              # Tuned for dark mode per request: #60A5FA reads 5.94:1 against the
+              # dark surface (#262628) where blue-700 managed only 2.25:1 and
+              # looked flat. The cost is light mode — hub.css paints .btn-primary
+              # as var(--light-text-color) (#f1f1f6, hardcoded and NOT themeable)
+              # on var(--primary-color), so primary buttons now sit near 2.4:1
+              # instead of 6.4:1. Accepted deliberately; revert to #1D4ED8 to
+              # trade it back.
+              #
+              # The real fix is dark-mode-aware theme vars upstream in jhub-apps.
               01-nebari-branding: |
                 from jhub_apps import themes
                 c.JupyterHub.template_vars = {
                     **themes.DEFAULT_THEME,
-                    "primary_color": "#1D4ED8",
-                    "primary_color_light": "#1D4ED814",
-                    "primary_color_dark": "#1E3A8A",
+                    "primary_color": "#60A5FA",
+                    "primary_color_light": "#60A5FA14",
+                    "primary_color_dark": "#3B82F6",
                     "secondary_color": "#0F766E",
                     "secondary_color_dark": "#0B5C56",
-                    "accent_color": "#1E3A8A",
-                    "accent_color_dark": "#172F6B",
+                    "accent_color": "#3B82F6",
+                    "accent_color_dark": "#60A5FA",
                 }
 
   destination:
