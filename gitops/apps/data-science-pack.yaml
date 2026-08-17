@@ -102,6 +102,24 @@ spec:
                     - port: 10443
                       protocol: TCP
           hub:
+            # Hub image from the pack's main branch, NOT from the chart revision
+            # pinned above (feat/user-shared-volumes, whose image ships
+            # jhub-apps 2025.11.1). Dark mode needs jhub-apps >= 2026.7.1 (the
+            # profile-menu light/dark toggle, jhub-apps commit 53b6dd5) and this
+            # image carries ==2026.7.1.
+            #
+            # Deliberate image/chart skew. It works because jhub-apps 2026.7.1
+            # keeps the API this chart's config.d uses — theme_template_paths,
+            # the themes submodule, and install_jhub_apps(c, spawner_to_subclass=…)
+            # all still resolve. Multi-arch (amd64+arm64), so no Rosetta concern.
+            #
+            # Known wart: the singleuser image still pins jhub-apps 2025.11.1,
+            # so hub and singleuser are version-skewed. Watch app spawning.
+            # The real fix is getting feat/user-shared-volumes merged (it holds
+            # 32 unmerged commits, including the nebi-envs stale-token fix) so
+            # chart and image can come from one revision again.
+            image:
+              tag: sha-16c1922
             # japps runs inside the hub pod and calls the hub API via the
             # `hub` Service; the hub NetworkPolicy only admits pods with the
             # network-access-hub label, which the hub pod lacks by default.
