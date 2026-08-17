@@ -25,22 +25,73 @@ spec:
         # The chart defaults image tags to appVersion (0.1.0), which is not
         # published on ghcr; pin the sha tag of the commit in use instead.
         # Images are multi-arch (amd64+arm64) — no digest workarounds needed.
+        #
+        # sha-92a564e is "feat: support runtime branding configs for the
+        # apps-ui" (#6) — the commit that added ui.branding below. All four
+        # images are kept on one sha so the chart and its components stay
+        # consistent.
         operator:
           image:
-            tag: sha-4f9045f
+            tag: sha-92a564e
         api:
           image:
-            tag: sha-4f9045f
+            tag: sha-92a564e
           # Users may launch apps into this namespace (also the release ns,
           # so ArgoCD creates and labels it).
           allowedNamespaces:
             - apps
         ui:
           image:
-            tag: sha-4f9045f
+            tag: sha-92a564e
+          # Deep Blue & Teal palette, shared with the landing / chat /
+          # llm-serving / provenance packs and the jhub-apps hub theme.
+          #
+          # NOTE on `secondary`: as in the other shadcn packs, `secondary` is a
+          # neutral *surface* token paired with dark text, not a brand fill, so
+          # it carries a teal tint and the saturated teal sits on
+          # secondaryForeground.
+          #
+          # headerBackground / headerForeground / headerBorder / bodyBackground
+          # are this pack's own top-bar tokens. Left unset deliberately — they
+          # default to neutral zinc, which matches the neutral chrome of the
+          # other packs. Set them only to brand the top bar itself.
+          #
+          # primaryHover / sidebarPrimary / sidebarRing are NOT in this chart's
+          # documented token list, but ui/src/index.css hardcodes them to the
+          # magenta scale (--primary-hover: var(--primary-magenta-700), etc.)
+          # where `primary` alone cannot reach — primaryHover drives button and
+          # badge hover. They apply because toCssVars() kebab-cases whatever
+          # keys the JSON carries with no runtime allowlist (ThemeTokens is a
+          # compile-time type). Same defect the llm-serving, provenance, and
+          # landing packs just fixed upstream; drop these once apps-pack derives
+          # them from --primary too.
+          branding:
+            theme:
+              light:
+                primary: "#1D4ED8"
+                primaryForeground: "#FFFFFF"
+                secondary: "#E6FAF7"
+                secondaryForeground: "#0F766E"
+                accent: "#E8EEFC"
+                accentForeground: "#1E3A8A"
+                ring: "#1D4ED8"
+                primaryHover: "#1E3A8A"
+                sidebarPrimary: "#1D4ED8"
+                sidebarRing: "#1D4ED8"
+              dark:
+                primary: "#60A5FA"
+                primaryForeground: "#0B1220"
+                secondary: "#16332F"
+                secondaryForeground: "#7FE9DA"
+                accent: "#132039"
+                accentForeground: "#BFD4FE"
+                ring: "#60A5FA"
+                primaryHover: "#93C5FD"
+                sidebarPrimary: "#60A5FA"
+                sidebarRing: "#60A5FA"
         mcp:
           image:
-            tag: sha-4f9045f
+            tag: sha-92a564e
 
         keycloak:
           # Browser-facing URL (SPA login); the API fetches JWKS via the
