@@ -66,8 +66,14 @@ spec:
             hostname: llm-keys.nebari.local
         frontend:
           enabled: true
+          # Ahead of the 0.1.3 chart's own frontend build: this is the merge
+          # commit of PR #169, which derives --primary-hover / --sidebar-primary
+          # / --sidebar-ring from --primary instead of hardcoding the old Nebari
+          # magenta. With this image the branding block below no longer needs the
+          # undocumented primaryHover/sidebarPrimary/sidebarRing overrides — they
+          # are kept only until a chart release carries the fix.
           image:
-            tag: "sha-a88351b@sha256:2e61847c2313ebf4d58ec93a77a44bedf2d78d7365fd7d4aec75bfda9f03e76a"
+            tag: "sha-c054c56@sha256:8997eec1be172e55285987604092f23247e436c18a700b4da01e873310ee6b20"
             pullPolicy: IfNotPresent
           keycloak:
             url: https://keycloak.nebari.local

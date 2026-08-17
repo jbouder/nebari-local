@@ -34,6 +34,22 @@ spec:
           size: 1Gi
 
         frontend:
+          # Ahead of the 0.1.2 chart's own frontend build: `main` carries PR #81,
+          # which derives --primary-hover / --sidebar-primary / --sidebar-ring
+          # from --primary instead of hardcoding the old Nebari magenta. There is
+          # no per-commit sha- tag for that merge, so this floats on `main`.
+          #
+          # Pre-loaded into the kind node by amd64-manifest digest and force-
+          # tagged (README "Node-side digest pull + retag"); this chart puts
+          # image.tag in a k8s label, so it cannot be digest-pinned here. Re-run
+          # that after a cluster recreate or the pod will not find the image:
+          #   ghcr.io/nebari-dev/provenance-collector-pack/frontend
+          #   sha256:c6719f9753894c950c5bee499fc137fcb297b335c55eec58140516f6372bc215
+          #
+          # Once a chart release carries the fix, drop this back to the chart
+          # default and delete the primaryHover/sidebar* overrides below.
+          image:
+            tag: "main"
           keycloak:
             # Browser-facing URL used by the SPA's in-browser OIDC login.
             url: https://keycloak.nebari.local
