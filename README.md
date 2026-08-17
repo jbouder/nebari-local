@@ -237,8 +237,10 @@ Four things that are easy to trip over:
   magenta, where `primary` alone cannot reach. They apply because the runtime
   applier kebab-cases whatever keys the JSON carries with no allowlist. Fixed
   upstream in llm-serving-pack#169 and provenance-collector-pack#81 (merged),
-  with nebari-landing#200 open and the same fix in flight for apps-pack — drop
-  the overrides per pack once a release carrying the fix is deployed.
+  with nebari-landing#200 and apps-pack#7 open — drop the overrides per pack
+  once a release carrying the fix is deployed. In apps-pack the symptom is
+  widest: `--primary-hover` backs six components there (button, badge, switch,
+  slider, checkbox, radio-group), not just button and badge.
 
 - **jhub-apps has no light/dark split.** `get_theme()` returns a single palette
   and `theme.css` emits it at `:root` with no `.dark` variant (still true in
