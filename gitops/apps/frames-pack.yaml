@@ -10,14 +10,19 @@ metadata:
 spec:
   project: nebari-apps
 
-  # Vendored copy of the upstream nebari-frames chart, tracking main at
-  # 84cdd83 rather than the v0.1.5 release — that release predates branding
-  # and there is no newer tag yet. One local
-  # addition on top: orgCABundle support, because the backend fails fast
-  # fetching OIDC discovery from https://keycloak.nebari.local and the
-  # upstream chart has no way to inject the gateway CA. Drop the vendored
-  # copy once upstream grows extraEnv/extraVolumes or a CA option; re-vendor
-  # from a tag once one carries branding.
+  # Vendored copy of the PUBLISHED nebari-frames 0.1.6 chart — no longer
+  # tracking main. 0.1.6 is the release of 84cdd83, so branding (#56) and the
+  # header rebuild are both in it.
+  #
+  # Still vendored for one reason only: orgCABundle support. The backend fails
+  # fast fetching OIDC discovery from https://keycloak.nebari.local and the
+  # upstream chart still has no way to inject the gateway CA (re-checked
+  # against 0.1.6 — no extraEnv, extraVolumes or caBundle hook). Drop the
+  # vendored copy the moment upstream grows one; re-vendor with
+  #   helm pull nebari/nebari-frames --version <v> --untar
+  # and re-apply the orgCABundle delta (values.yaml + templates/deployment.yaml).
+  # Pull the PUBLISHED chart, not git: CI stamps version/appVersion at release
+  # time, so the in-repo Chart.yaml always reads 0.1.0.
   source:
     repoURL: file:///Users/johnnybouder/repos/nebari-local
     targetRevision: main
@@ -27,16 +32,16 @@ spec:
       values: |
         image:
           # amd64-only image pinned by digest for the arm64 kind node (Rosetta).
-          # Must be a main build, not v0.1.5: the Go server is what serves
-          # /config.json, so branding needs the backend from the same commit
-          # as the vendored chart.
+          # Now the release tag rather than a sha- build, matching the chart's
+          # appVersion. Same source as the previous sha-84cdd83 pin — v0.1.6 IS
+          # 84cdd83 — but the tag push produced its own build, hence a different
+          # digest.
           #
-          # 84cdd83 ("Header cleanup") is frontend-only — it rebuilds the
-          # header nav in web/src/components/layout/Header.tsx and touches no
-          # chart file, so the vendored chart from b8db7f5 is still current.
-          # The SPA is embedded in the Go binary, so header changes ship in
-          # this image and nowhere else.
-          tag: "sha-84cdd83@sha256:f9fe87bd92df3522c0bcf517f488c798cb7ea5ff0acd3703fda1437b5fab3bc6"
+          # Keep chart and image on the same release: the SPA is embedded in the
+          # Go binary, so every web change (header, nav, branding applier) ships
+          # in this image and nowhere else. A UI change that doesn't appear is
+          # almost always a stale image pin.
+          tag: "v0.1.6@sha256:2fb5543c81927eb43446a2e27493d01657d75603ca1b0ac9ec6aa133e83e67b5"
 
         # Deep Blue & Teal palette, shared with the landing / chat / provenance /
         # llm-serving / apps packs. Rendered into a ConfigMap and served by the

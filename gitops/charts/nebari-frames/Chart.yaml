@@ -1,14 +1,11 @@
 apiVersion: v2
-# Vendored from nebari-frames main, which is AHEAD of the v0.1.5 release —
-# branding has not been released yet. The prerelease version string records
-# that provenance; re-stamp it to the plain release version once a tag carrying
-# branding exists upstream.
-#
-# The chart itself is unchanged since b8db7f5 (PR #56, runtime branding);
-# appVersion tracks the image commit, which has moved on to 84cdd83
-# ("Header cleanup", frontend-only).
-appVersion: sha-84cdd83
+# Vendored from the PUBLISHED nebari-frames 0.1.6 chart (helm pull
+# nebari/nebari-frames --version 0.1.6), not from git: CI stamps version and
+# appVersion at release time, so the in-repo chart/Chart.yaml still reads 0.1.0.
+# Version left at the upstream release value — the only local delta is the
+# orgCABundle addition in values.yaml + templates/deployment.yaml.
+appVersion: v0.1.6
 description: Nebari Frames - single-binary Frames server (SPA + API) for Nebari
 name: nebari-frames
 type: application
-version: 0.1.6-main.84cdd83
+version: 0.1.6

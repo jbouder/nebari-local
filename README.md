@@ -93,7 +93,7 @@ NIC-owned apps; `nebari-apps` allows any source repo and any namespace:
 | Provenance Collector | https://provenance.nebari.local | Daily scan at 06:00; http persistence mode |
 | Apps | https://apps.nebari.local | Launch static/pixi web apps (UI + API + MCP at /mcp); apps serve at `<name>.apps.nebari.local` |
 | Harbor | https://harbor.nebari.local | OCI registry + Trivy scanning; "LOGIN VIA OIDC PROVIDER" (Keycloak) or `admin` with the harbor-admin secret |
-| Frames | https://frames.nebari.local | Context Frames registry + remote MCP endpoint (vendored chart at `gitops/charts/nebari-frames`, tracking upstream `main` — v0.1.5 predates runtime branding — plus the local CA addition). Chart is current as of `b8db7f5`; the image runs `84cdd83` |
+| Frames | https://frames.nebari.local | Context Frames registry + remote MCP endpoint. Chart `0.1.6` and image `v0.1.6`, but the chart is **vendored** at `gitops/charts/nebari-frames` — upstream still has no CA-injection hook, so the local `orgCABundle` addition lives there (see [Deliberate version skew](#deliberate-version-skew)) |
 | LLM Serving | https://llm-keys.nebari.local | llm-d operator + API-key manager UI. **No GPUs** here, so GPU `LLMModel` CRs won't schedule (default serving image is CUDA-only). Chart `0.1.4`, with operator, key-manager and frontend images digest-pinned to `sha-a8e74a3` — the same release commit (see [Deliberate version skew](#deliberate-version-skew)). Prereqs installed alongside: Envoy AI Gateway v0.5.0 + GIE v1.5.0 CRDs, and the foundational envoy-gateway app carries AI-extension wiring |
 | ↳ CPU models | https://llm.nebari.local | Two CPU models (`gitops/manifests/llm-models/`) on llama.cpp's multi-arch server image — `gpu.count: 0` + `serving.command` override (`sh -c` swallows the operator's vLLM args). All models share `llm.nebari.local`, routed by the `model` field in the request body |
 
@@ -305,20 +305,28 @@ or a release carries the fix:
   containerd's platform match on the arm64 node. Pinning to the release commit
   rather than a floating tag is the fix, not a skew.
 
-- **`frames-pack`** vendors the chart from `main` rather than the `v0.1.5` tag,
-  and tracks `main` for the image too. Runtime branding (nebari-frames#56) is
-  unreleased, and it spans both halves: the chart renders the ConfigMap, but
-  it's the Go server — not nginx — that serves `/config.json`, so a v0.1.5
-  image with the main chart would mount the config and ignore it.
+- **`frames-pack`** is no longer version-skewed — chart `0.1.6` and image
+  `v0.1.6` are the same release (both are commit `84cdd83`, which carries
+  runtime branding and the header rebuild). It stays listed here because the
+  chart is still **vendored** rather than pulled from the repo: upstream 0.1.6
+  has no `extraEnv`, `extraVolumes` or CA-bundle hook, and the backend fails
+  fast fetching OIDC discovery from `https://keycloak.nebari.local` without
+  one. The `orgCABundle` addition is the *only* local delta.
 
-  Chart and image do *not* have to sit on the same commit — only on compatible
-  ones. The chart is current as of `b8db7f5`; the image runs `84cdd83`
-  ("Header cleanup"), which is frontend-only and touches no chart file. **The
-  SPA is embedded in the Go binary**, so every web change — header, nav,
+  To re-vendor on the next release — pull the **published** chart, not git; CI
+  stamps `version`/`appVersion` at release time, so the in-repo `Chart.yaml`
+  always reads `0.1.0`:
+  ```bash
+  helm pull nebari/nebari-frames --version <v> --untar --untardir /tmp/f
+  diff -ru /tmp/f/nebari-frames gitops/charts/nebari-frames   # expect only orgCABundle
+  ```
+  Then re-apply the `orgCABundle` delta to `values.yaml` and
+  `templates/deployment.yaml` and re-diff to confirm nothing else crept in.
+  Drop the vendored copy entirely the moment upstream grows a CA hook.
+
+  **The SPA is embedded in the Go binary**, so every web change — header, nav,
   branding applier — ships in the image and nowhere else: a UI change that
-  doesn't land is almost always a stale image pin, not a chart problem. When
-  re-vendoring, check `git diff <old> <new> -- chart/` and only re-copy when
-  it's non-empty.
+  doesn't land is almost always a stale image pin, not a chart problem.
 
 - **`nebari-landingpage`** pins a `main` commit (`8b7042a`) rather than a
   release tag, so its images float on `:latest`. That revision emits
