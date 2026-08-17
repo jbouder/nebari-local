@@ -94,7 +94,7 @@ NIC-owned apps; `nebari-apps` allows any source repo and any namespace:
 | Apps | https://apps.nebari.local | Launch static/pixi web apps (UI + API + MCP at /mcp); apps serve at `<name>.apps.nebari.local` |
 | Harbor | https://harbor.nebari.local | OCI registry + Trivy scanning; "LOGIN VIA OIDC PROVIDER" (Keycloak) or `admin` with the harbor-admin secret |
 | Frames | https://frames.nebari.local | Context Frames registry + remote MCP endpoint (vendored chart at `gitops/charts/nebari-frames`, tracking upstream `main` — v0.1.5 predates runtime branding — plus the local CA addition). Chart is current as of `b8db7f5`; the image runs `84cdd83` |
-| LLM Serving | https://llm-keys.nebari.local | llm-d operator + API-key manager UI. **No GPUs** here, so GPU `LLMModel` CRs won't schedule (default serving image is CUDA-only). Operator, key-manager and frontend images all run ahead of the 0.1.3 chart at `sha-4cfb58c` (see [Deliberate version skew](#deliberate-version-skew)). Prereqs installed alongside: Envoy AI Gateway v0.5.0 + GIE v1.5.0 CRDs, and the foundational envoy-gateway app carries AI-extension wiring |
+| LLM Serving | https://llm-keys.nebari.local | llm-d operator + API-key manager UI. **No GPUs** here, so GPU `LLMModel` CRs won't schedule (default serving image is CUDA-only). Chart `0.1.4`, with operator, key-manager and frontend images digest-pinned to `sha-a8e74a3` — the same release commit (see [Deliberate version skew](#deliberate-version-skew)). Prereqs installed alongside: Envoy AI Gateway v0.5.0 + GIE v1.5.0 CRDs, and the foundational envoy-gateway app carries AI-extension wiring |
 | ↳ CPU models | https://llm.nebari.local | Two CPU models (`gitops/manifests/llm-models/`) on llama.cpp's multi-arch server image — `gpu.count: 0` + `serving.command` override (`sh -c` swallows the operator's vLLM args). All models share `llm.nebari.local`, routed by the `model` field in the request body |
 
 Current models (both thinking models — append ` /no_think` to prompts or
@@ -135,7 +135,7 @@ curl -sk https://llm.nebari.local/v1/chat/completions \
 > api-key Secret change.
 
 > **Route timeouts are now the operator's job** (fixed upstream in
-> nebari-llm-serving-pack#168, carried by the `sha-4cfb58c` operator image
+> nebari-llm-serving-pack#168, carried by chart 0.1.4 and the `sha-a8e74a3` operator image
 > pinned in `gitops/apps/llm-serving-pack.yaml`). The ai-gateway controller
 > renders LLM routes with a default `request: 60s`, which CPU inference
 > exceeds on long/thinking generations — streams died mid-token and apollo
@@ -145,29 +145,25 @@ curl -sk https://llm.nebari.local/v1/chat/completions \
 > is gone and there is nothing to re-apply after a model becomes Ready, an
 > LLMModel spec change, or a cluster stop/start.
 >
-> Don't set `spec.endpoints.requestTimeout` on the `LLMModel` CRs: #168 also
-> added that field to the CRD, but chart **0.1.3 ships the pre-#168 CRD**, so
-> the field doesn't exist in-cluster. The operator's own `DefaultRequestTimeout`
-> ("600s") applies when it's empty, which is the value we want anyway. Chart
-> **0.1.4 does ship the new CRD** — lift this caveat when the pack moves to it.
+> Chart 0.1.4 ships the post-#168 CRD, so `spec.endpoints.requestTimeout` now
+> exists on the `LLMModel` CRs and may be set per model. Leaving it unset is
+> still correct here — the CRD default and the operator's own
+> `DefaultRequestTimeout` are both `600s`.
 
-> **Chart `0.1.4` is tagged but not published.** The pack's "Release Chart"
-> workflow doesn't push to the index — it opens a sync PR against
-> `nebari-dev/helm-repository`, and #82 is still open. Pointing
-> `targetRevision` at an unpublished version makes ArgoCD fail to resolve the
-> chart and **stop syncing while still reporting `Healthy`**, since the live
-> workloads are untouched; the give-away is `Sync: Unknown` plus a
-> `ComparisonError` condition. Before bumping any pack's chart version, confirm
-> it actually exists:
+> **A tagged chart version is not a published one.** These packs' release
+> workflows don't push to the index; they open a sync PR against
+> `nebari-dev/helm-repository`, which someone has to merge. Pointing
+> `targetRevision` at a tagged-but-unpublished version makes ArgoCD fail to
+> resolve the chart and **stop syncing while still reporting `Healthy`**, since
+> the live workloads are untouched — the only tell is `Sync: Unknown` plus a
+> `ComparisonError` condition. Check the index before bumping any pack:
 > ```bash
 > curl -s https://nebari-dev.github.io/helm-repository/index.yaml | \
 >   yq '.entries.nebari-llm-serving[].version'
 > ```
-> The upgrade steps for when it lands are written out in
-> `gitops/apps/llm-serving-pack.yaml`.
 
 > **API-key metadata survives reconciles** as of nebari-llm-serving-pack#166
-> (same `sha-4cfb58c` image). Previously every LLMModel reconcile wiped the
+> (same release). Previously every LLMModel reconcile wiped the
 > `<model>-api-key-metadata` ConfigMap, so keys vanished from the llm-keys UI
 > the moment they were minted (key creation writes the api-keys Secret, which
 > triggers a reconcile) even though the credentials kept working. The
@@ -207,10 +203,15 @@ amd64 binaries either way):
      <image>@sha256:<amd64-manifest-digest> <image>:<tag>
    ```
    Required after a cluster recreate (automated by `post-recreate.sh`) for:
-   - `quay.io/nebari/provenance-collector:0.1.2`
-     (`sha256:c18bcf8a8c70bc60425b9293d0bbea3da857ae39f2a16d2b8aaee2ca447c7668`)
-   - `ghcr.io/nebari-dev/provenance-collector-pack/frontend:0.1.2`
-     (`sha256:08c87115afef393f498220b8fe43c338a511798d6183527cfce9acbf3d92f9b9`)
+   - `quay.io/nebari/provenance-collector:0.1.3`
+     (`sha256:37f9de7ac4276dfee6486ed5eea1962fdb4c31f554065d9307464001a09c180f`)
+   - `ghcr.io/nebari-dev/provenance-collector-pack/frontend:0.1.3`
+     (`sha256:7ea808ae4d21a0d38b829a94d1df373826daa4e72dea307439adfc930ff1ac23`)
+
+   Both tags follow the provenance chart's `appVersion`, so they must be
+   bumped together with `targetRevision` in
+   `gitops/apps/provenance-collector.yaml` — otherwise the pods request a tag
+   that was never retagged and fail with "no match for platform in manifest".
 
 ### Branding
 
@@ -247,21 +248,24 @@ Four things that are easy to trip over:
   `checksum/config` and roll themselves — only the landing page needs this.
 
 - **`primaryHover` / `sidebarPrimary` / `sidebarRing` are undocumented
-  overrides.** The shadcn-based frontends hardcode `--primary-hover` (which
-  backs every button and badge hover) and the sidebar tokens to the old Nebari
-  magenta, where `primary` alone cannot reach. They apply because the runtime
-  applier kebab-cases whatever keys the JSON carries with no allowlist. Fixed
-  upstream in llm-serving-pack#169 and provenance-collector-pack#81 (merged),
-  with nebari-landing#200 and apps-pack#7 open — drop the overrides per pack
-  once a release carrying the fix is deployed. In apps-pack the symptom is
-  widest: `--primary-hover` backs six components there (button, badge, switch,
-  slider, checkbox, radio-group), not just button and badge.
+  overrides**, still needed by two packs. The shadcn-based frontends hardcode
+  `--primary-hover` (which backs every button and badge hover) and the sidebar
+  tokens to the old Nebari magenta, where `primary` alone cannot reach. They
+  apply because the runtime applier kebab-cases whatever keys the JSON carries
+  with no allowlist.
 
-  **Frames is the exception** — the applier added in nebari-frames#56 *derives*
-  `--primary-hover` (a 15% oklab darkening in light, 18% lightening in dark) and
-  `--ring` from an overridden `--primary`, so `frames-pack.yaml` sets the six
-  palette tokens and nothing else. This is the shape the other packs are moving
-  toward; use it as the reference when their fixes ship.
+  **Still carrying them:** `nebari-landingpage` (nebari-landing#200 open) and
+  `apps-pack` (apps-pack#7 open). In apps-pack the symptom is widest —
+  `--primary-hover` backs six components there (button, badge, switch, slider,
+  checkbox, radio-group), not just button and badge.
+
+  **No longer carrying them:** `frames-pack` (nebari-frames#56),
+  `llm-serving-pack` (#169, in chart 0.1.4) and `provenance-collector` (#81, in
+  chart 0.1.3) all now *derive* `--primary-hover` (a 15% oklab darkening in
+  light, 18% lightening in dark) and `--ring` from `--primary`, so they set the
+  palette tokens and nothing else. Use one of those three as the reference when
+  the remaining two fixes ship. The escape hatch still works if a future
+  frontend reintroduces a hardcoded shade.
 
 - **jhub-apps has no light/dark split.** `get_theme()` returns a single palette
   and `theme.css` emits it at `:root` with no `.dark` variant (still true in
@@ -272,11 +276,12 @@ Four things that are easy to trip over:
   non-themeable `--light-text-color`, so light-mode primary buttons sit near
   2.4:1. Restore `#1D4ED8` in `data-science-pack.yaml` to trade back.
 
-- **Never point provenance-collector's frontend at the `main` tag.** That image
-  is built from `6d49f84` (2026-08-05) and is *older* than the `0.1.2` release
-  image (`b5a6448`, 2026-08-13), so it silently reverts the header restyle. This
-  pack publishes no per-commit `sha-` tags — `main`, `latest` and `0.1.2` are
-  the only ones, and `latest` == `0.1.2`. Use the chart default.
+- **Never point provenance-collector's frontend at the `main` tag.** This pack
+  publishes no per-commit `sha-` tags — `main`, `latest` and the release tags
+  are all there is — and `main` has historically lagged a release: the
+  `0.1.2`-era `main` image was built from `6d49f84` (2026-08-05), *older* than
+  the `0.1.2` release image (`b5a6448`, 2026-08-13), and silently reverted the
+  header restyle. Use the chart default, which tracks `appVersion`.
 
 ### Deliberate version skew
 
@@ -293,14 +298,12 @@ or a release carries the fix:
   would regress other things. Caveat: the singleuser image still pins
   2025.11.1, so hub and singleuser are version-skewed — watch app spawning.
 
-- **`llm-serving-pack`** keeps the chart at the `0.1.3` release but pins all
-  three images (operator, key-manager, frontend) to `sha-4cfb58c` from `main`,
-  for #166 (api-key metadata no longer wiped), #168 (operator-set route
-  timeouts) and #169 (branding-derived hover/sidebar tokens). The chart's CRDs
-  therefore lag its operator — see the `requestTimeout` note above for the one
-  place that matters. This skew closes when `0.1.4` is published (it contains
-  all three PRs); keep the images digest-pinned even then, since `0.1.4`
-  defaults every tag to `latest` and these images are amd64-only.
+- **`llm-serving-pack`** is no longer skewed — chart `0.1.4` and all three
+  images (`sha-a8e74a3`) are the same release. It stays listed here because the
+  images must remain **digest-pinned anyway**: `0.1.4` defaults every image tag
+  to `latest`, and these ghcr images are amd64-only, so an unpinned tag fails
+  containerd's platform match on the arm64 node. Pinning to the release commit
+  rather than a floating tag is the fix, not a skew.
 
 - **`frames-pack`** vendors the chart from `main` rather than the `v0.1.5` tag,
   and tracks `main` for the image too. Runtime branding (nebari-frames#56) is

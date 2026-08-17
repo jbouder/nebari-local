@@ -131,10 +131,13 @@ retag() { # retag <image> <tag> <amd64-digest>
     echo "  $1:$2 retagged from amd64 digest"
   fi
 }
-retag quay.io/nebari/provenance-collector 0.1.2 \
-  sha256:c18bcf8a8c70bc60425b9293d0bbea3da857ae39f2a16d2b8aaee2ca447c7668
-retag ghcr.io/nebari-dev/provenance-collector-pack/frontend 0.1.2 \
-  sha256:08c87115afef393f498220b8fe43c338a511798d6183527cfce9acbf3d92f9b9
+# Tags follow the provenance chart's appVersion — bump these together with
+# targetRevision in gitops/apps/provenance-collector.yaml, or the pods fail
+# with "no match for platform in manifest" on the arm64 node.
+retag quay.io/nebari/provenance-collector 0.1.3 \
+  sha256:37f9de7ac4276dfee6486ed5eea1962fdb4c31f554065d9307464001a09c180f
+retag ghcr.io/nebari-dev/provenance-collector-pack/frontend 0.1.3 \
+  sha256:7ea808ae4d21a0d38b829a94d1df373826daa4e72dea307439adfc930ff1ac23
 
 # --------------------------------------------------- 5. keycloak live bits
 # The operator does not create these (upstream gaps): the frames audience

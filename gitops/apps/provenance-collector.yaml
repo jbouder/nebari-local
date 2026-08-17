@@ -12,7 +12,7 @@ spec:
   source:
     repoURL: https://nebari-dev.github.io/helm-repository
     chart: provenance-collector
-    targetRevision: "0.1.2"
+    targetRevision: "0.1.3"
     helm:
       releaseName: provenance-collector
       values: |
@@ -21,6 +21,11 @@ spec:
         # NOTE: this chart's images are amd64-only and image.tag feeds a k8s
         # label, so tag@digest is invalid here. Instead the amd64 images are
         # pre-loaded into the kind node (see README) and pulled IfNotPresent.
+        #
+        # Both image tags default to the chart appVersion, so bumping
+        # targetRevision changes which tags the pods ask for. The retags in
+        # scripts/post-recreate.sh MUST move with it or the pods fail with "no
+        # match for platform in manifest" on the arm64 node.
 
         config:
           clusterName: nebari-local
@@ -34,19 +39,16 @@ spec:
           size: 1Gi
 
         frontend:
-          # NO image override — use the chart default (0.1.2), which is built
-          # from b5a6448 "feat: adopt the Nebari Design registry header and
-          # theme hook" (2026-08-13) and carries the current header styling.
+          # NO image override — use the chart default (0.1.3), which sits
+          # directly on 5c87fa6, the merged hover fix (PR #81). That is why the
+          # branding block below no longer carries the primaryHover/sidebar*
+          # overrides.
           #
-          # Do NOT point this at the floating `main` tag: that image is built
-          # from 6d49f84 (2026-08-05) and is OLDER than the 0.1.2 release, so it
-          # silently reverts the header work. This pack publishes no per-commit
-          # sha- tags at all; `main`, `latest` and `0.1.2` are the only tags, and
-          # `latest` == `0.1.2`.
-          #
-          # Consequence: the merged hover fix (PR #81, 5c87fa6) has no published
-          # image, so the primaryHover/sidebar* overrides below are still doing
-          # the real work here. Drop them only once a release carries the fix.
+          # Do NOT point this at the floating `main` tag. This pack publishes no
+          # per-commit sha- tags; `main`, `latest` and the release tags are all
+          # there is, and `main` has historically lagged a release (the 0.1.2-era
+          # `main` image was built from 6d49f84, OLDER than the release, and
+          # silently reverted the header work). Use the chart default.
           keycloak:
             # Browser-facing URL used by the SPA's in-browser OIDC login.
             url: https://keycloak.nebari.local
@@ -60,14 +62,13 @@ spec:
           # secondaryForeground. Chart default primary is the old Nebari
           # magenta, oklch(55.06% 0.1886 311.45).
           #
-          # primaryHover / sidebarPrimary / sidebarRing are NOT in the chart's
-          # documented token list, but they are real purple (oklch hue ~311)
-          # defaults in the frontend's index.css that `primary` alone does not
-          # reach — primaryHover drives every button and badge hover state.
-          # They work because the runtime applier kebab-cases whatever keys the
-          # JSON carries with no allowlist (ThemeTokens is a compile-time type
-          # only), and the chart passes the theme map straight through toJson.
-          # Undocumented, so re-check after a frontend bump.
+          # No primaryHover / sidebarPrimary / sidebarRing overrides: PR #81
+          # (in this release) derives those from --primary, so the old Nebari
+          # magenta no longer leaks into hover and sidebar states. They were
+          # undocumented keys that only worked because the runtime applier
+          # kebab-cases whatever the JSON carries with no allowlist — if a
+          # future frontend bump ever reintroduces a hardcoded hover shade,
+          # that escape hatch still exists.
           branding:
             theme:
               light:
@@ -78,9 +79,6 @@ spec:
                 accent: "#E8EEFC"
                 accentForeground: "#1E3A8A"
                 ring: "#1D4ED8"
-                primaryHover: "#1E3A8A"
-                sidebarPrimary: "#1D4ED8"
-                sidebarRing: "#1D4ED8"
               dark:
                 primary: "#60A5FA"
                 primaryForeground: "#0B1220"
@@ -89,9 +87,6 @@ spec:
                 accent: "#132039"
                 accentForeground: "#BFD4FE"
                 ring: "#60A5FA"
-                primaryHover: "#93C5FD"
-                sidebarPrimary: "#60A5FA"
-                sidebarRing: "#60A5FA"
 
         webUI:
           enabled: true
