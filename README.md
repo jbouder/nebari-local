@@ -255,24 +255,27 @@ Four things that are easy to trip over:
   for free — worth an upstream `checksum/config` annotation.
 
 - **`primaryHover` / `sidebarPrimary` / `sidebarRing` are undocumented
-  overrides**, still needed by two packs. The shadcn-based frontends hardcode
+  overrides**, now needed by one pack only. The shadcn-based frontends hardcode
   `--primary-hover` (which backs every button and badge hover) and the sidebar
   tokens to the old Nebari magenta, where `primary` alone cannot reach. They
   apply because the runtime applier kebab-cases whatever keys the JSON carries
   with no allowlist.
 
-  **Still carrying them:** `nebari-landingpage` (nebari-landing#200 open) and
-  `apps-pack` (apps-pack#7 open). In apps-pack the symptom is widest —
-  `--primary-hover` backs six components there (button, badge, switch, slider,
-  checkbox, radio-group), not just button and badge.
+  **Still carrying them:** `apps-pack` alone (apps-pack#7 open), where the
+  symptom is widest — `--primary-hover` backs six components there (button,
+  badge, switch, slider, checkbox, radio-group), not just button and badge.
 
-  **No longer carrying them:** `frames-pack` (nebari-frames#56),
-  `llm-serving-pack` (#169, in chart 0.1.4) and `provenance-collector` (#81, in
-  chart 0.1.3) all now *derive* `--primary-hover` (a 15% oklab darkening in
-  light, 18% lightening in dark) and `--ring` from `--primary`, so they set the
-  palette tokens and nothing else. Use one of those three as the reference when
-  the remaining two fixes ship. The escape hatch still works if a future
-  frontend reintroduces a hardcoded shade.
+  **No longer carrying them:** `nebari-landingpage` (nebari-landing#200, in
+  chart 0.1.5), `frames-pack` (nebari-frames#56), `llm-serving-pack` (#169, in
+  chart 0.1.4) and `provenance-collector` (#81, in chart 0.1.3) all now
+  *derive* `--primary-hover` (a 15% oklab darkening in light, 18% lightening in
+  dark) and `--ring` from `--primary`, so they set the palette tokens and
+  nothing else. Use any of them as the reference when apps-pack#7 ships. The
+  escape hatch still works if a future frontend reintroduces a hardcoded shade.
+
+  Dropping the two landing overrides was not quite a no-op: `sidebarRing` had
+  equalled `ring` exactly, but `primaryHover` moves off the literal blue-900 /
+  blue-300 (`#1E3A8A` / `#93C5FD`) onto the derived `#153DAE` / `#7EB6FC`.
 
 - **jhub-apps has no light/dark split.** `get_theme()` returns a single palette
   and `theme.css` emits it at `:root` with no `.dark` variant (still true in
@@ -339,13 +342,20 @@ or a release carries the fix:
   branding applier — ships in the image and nowhere else: a UI change that
   doesn't land is almost always a stale image pin, not a chart problem.
 
-- **`nebari-landingpage`** pins a `main` commit (`8b7042a`) rather than a
-  release tag, so its images float on `:latest`. That revision emits
-  `landingPage.iconDark` on its NebariApp CR, which **requires
-  nebari-operator >= v0.1.0** (`gitops/manifests/nebari-operator/`, bumped from
-  `v0.1.0-alpha.20`). On the older CRD, ArgoCD's ServerSideApply diff fails with
-  `field not declared in schema` and the whole app silently stops syncing while
-  still reporting healthy.
+- **`nebari-landingpage`** is no longer skewed — it moved off the `8b7042a`
+  `main` commit onto the `v0.1.5` tag, two commits later. Release-prep stamps
+  `appVersion: "0.1.5"` in the tagged commit and `values.yaml` leaves both
+  image tags empty, so frontend and webapi fall back to `.Chart.AppVersion` and
+  land on real `0.1.5` builds instead of floating on `:latest` (which is what
+  `main`'s `appVersion: "latest"` gave). **Keep this on a tag** — a `main`
+  commit silently reintroduces the float.
+
+  It stays listed here for the CRD floor: the chart emits
+  `landingPage.iconDark` on its NebariApp CR (still true at v0.1.5), which
+  **requires nebari-operator >= v0.1.0** (`gitops/manifests/nebari-operator/`,
+  bumped from `v0.1.0-alpha.20`). On the older CRD, ArgoCD's ServerSideApply
+  diff fails with `field not declared in schema` and the whole app silently
+  stops syncing while still reporting healthy.
 
 ### In-cluster access to `*.nebari.local` (required for pack OIDC)
 

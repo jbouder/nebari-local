@@ -15,17 +15,21 @@ spec:
 
   source:
     repoURL: https://github.com/nebari-dev/nebari-landing
-    # Deliberately pinned to a main commit rather than a release tag, to stay
-    # current with main's landing-page fixes. Trade-off: main's Chart.yaml sets
-    # appVersion "latest", so the frontend/webapi images float to main's newest
-    # build on every sync rather than staying on pinned release builds. Move to
-    # a release tag if you want reproducible images back — branding.theme (set
-    # below) is supported on the tags too.
+    # On the v0.1.5 release tag rather than a main commit. v0.1.5 is two
+    # commits past the old 8b7042a pin and carries nebari-landing#200 (hover
+    # and sidebar-ring derived from primary/ring — see the branding note
+    # below), so there is nothing left on main worth floating for.
     #
-    # Note this revision also requires nebari-operator >= v0.1.0: the chart on
-    # main emits landingPage.iconDark on its NebariApp CR, which the
-    # v0.1.0-alpha.20 CRD did not declare (see the operator kustomization).
-    targetRevision: 8b7042a
+    # This also pins the images: release-prep stamps appVersion "0.1.5" in the
+    # tagged commit, and values.yaml leaves both image tags empty so the
+    # deployments fall back to .Chart.AppVersion. On main appVersion is
+    # "latest", which floated frontend/webapi to main's newest build on every
+    # sync. Reproducible builds are back — keep this on a tag.
+    #
+    # Still requires nebari-operator >= v0.1.0: the chart emits
+    # landingPage.iconDark on its NebariApp CR, which the v0.1.0-alpha.20 CRD
+    # did not declare (see the operator kustomization).
+    targetRevision: v0.1.5
     path: charts/nebari-landing
     helm:
       releaseName: nebari-landing
@@ -48,14 +52,15 @@ spec:
           # every bg-secondary control at ~2.5:1. So secondary carries a
           # teal *tint* and the saturated teal lives on secondaryForeground.
           #
-          # primaryHover / sidebarRing are NOT in the chart's
-          # documented token list, but they are real purple (oklch hue ~311)
-          # defaults in the frontend's index.css that `primary` alone does not
-          # reach — primaryHover drives every button and badge hover state.
-          # They work because the runtime applier kebab-cases whatever keys the
-          # JSON carries with no allowlist (ThemeTokens is a compile-time type
-          # only), and the chart passes the theme map straight through toJson.
-          # Undocumented, so re-check after a frontend bump.
+          # The primaryHover / sidebarRing overrides are gone as of v0.1.5:
+          # nebari-landing#200 made index.css derive --primary-hover from
+          # --primary (15% oklab darkening in light, 18% lightening in dark)
+          # and --sidebar-ring from --ring, so setting the palette tokens is
+          # now enough. sidebarRing was an exact no-op (it equalled ring);
+          # primaryHover moves off the literal blue-900/blue-300 onto the
+          # derived #153DAE / #7EB6FC. Both are now in the chart's documented
+          # token list and still accepted as an escape hatch, if a future
+          # frontend reintroduces a hardcoded shade.
           branding:
             theme:
               light:
@@ -66,8 +71,6 @@ spec:
                 accent: "#E8EEFC"
                 accentForeground: "#1E3A8A"
                 ring: "#1D4ED8"
-                primaryHover: "#1E3A8A"
-                sidebarRing: "#1D4ED8"
               dark:
                 primary: "#60A5FA"
                 primaryForeground: "#0B1220"
@@ -76,8 +79,6 @@ spec:
                 accent: "#132039"
                 accentForeground: "#BFD4FE"
                 ring: "#60A5FA"
-                primaryHover: "#93C5FD"
-                sidebarRing: "#60A5FA"
 
         webapi:
           keycloak:
