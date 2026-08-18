@@ -307,10 +307,14 @@ or a release carries the fix:
 
 - **`llm-serving-pack`** is no longer skewed — chart `0.1.4` and all three
   images (`sha-a8e74a3`) are the same release. It stays listed here because the
-  images must remain **digest-pinned anyway**: `0.1.4` defaults every image tag
-  to `latest`, and these ghcr images are amd64-only, so an unpinned tag fails
-  containerd's platform match on the arm64 node. Pinning to the release commit
-  rather than a floating tag is the fix, not a skew.
+  images must remain **digest-pinned anyway**: these ghcr images are amd64-only,
+  so an unpinned tag fails containerd's platform match on the arm64 node.
+
+  Only the `@sha256` digest is doing work, not the tag. The *published* chart
+  already defaults these images to `sha-a8e74a3` — `pack-release` rewrites its
+  `tag-paths` at package time — even though the in-repo `values.yaml` reads
+  `latest`. Read published charts, not the git tree, when reasoning about
+  defaults.
 
 - **`frames-pack`** is no longer version-skewed — chart `0.1.6` and image
   `v0.1.6` are the same release (both are commit `84cdd83`, which carries

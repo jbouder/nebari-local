@@ -59,9 +59,14 @@ spec:
         # (llm-d serving images are CUDA-only).
 
         # ghcr images are amd64-only, so they stay digest-pinned for the arm64
-        # kind node EVEN THOUGH the chart is now on the matching release: 0.1.4
-        # defaults every image tag to "latest", and an unpinned tag fails
-        # containerd's platform match here.
+        # kind node EVEN THOUGH the chart is now on the matching release: an
+        # unpinned tag fails containerd's platform match here.
+        #
+        # Only the @sha256 digest is doing work — NOT the tag. The published
+        # 0.1.4 chart already defaults these to "sha-a8e74a3" (pack-release
+        # rewrites the tag-paths at package time), even though the in-repo
+        # values.yaml reads "latest". So this block is the chart's own tag plus
+        # a digest, not an override to a different build.
         #
         # sha-a8e74a3 is the 0.1.4 tag commit, so chart and images are one
         # release. It carries:
