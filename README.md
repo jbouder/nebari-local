@@ -237,15 +237,22 @@ hook; Nebi's app supports it but its chart does not yet (nebi-pack#48).
 
 Four things that are easy to trip over:
 
-- **The landing page needs a manual restart after a branding-only edit.** It
-  mounts `config.json` with `subPath` and its Deployment carries no
-  `checksum/config` annotation, so kubelet never updates the file in place and
-  ArgoCD still reports `Synced/Healthy` while nginx serves the old colors:
+- **The landing page and nebari-chat need a manual restart after a
+  branding-only edit.** Both mount `config.json` with `subPath` and neither
+  Deployment carries a `checksum/config` annotation, so kubelet never updates
+  the file in place and ArgoCD still reports `Synced/Healthy` while nginx
+  serves the old colors:
   ```bash
   kubectl rollout restart deploy/nebari-landing-frontend -n nebari-system
+  kubectl rollout restart deploy/nebari-chat-frontend -n nebari-chat
   ```
-  The llm-serving, provenance and apps-pack frontends *do* set
-  `checksum/config` and roll themselves — only the landing page needs this.
+  The llm-serving, provenance, apps-pack and frames frontends *do* set
+  `checksum/config` and roll themselves.
+
+  Chat only joined this list at chart `0.0.26`: the `0.0.26-pr.189`
+  pre-release passed branding as env vars, so a change altered the pod spec and
+  rolled it automatically. The stable chart moved to a ConfigMap and lost that
+  for free — worth an upstream `checksum/config` annotation.
 
 - **`primaryHover` / `sidebarPrimary` / `sidebarRing` are undocumented
   overrides**, still needed by two packs. The shadcn-based frontends hardcode

@@ -10,16 +10,26 @@ metadata:
 spec:
   project: nebari-apps
   source:
-    # Released chart (the in-repo chart has an unstamped "set-by-cd" version
-    # that helm rejects). Requires the quay-oci ArgoCD repository secret.
-    # 0.0.26-pr.189 pre-release: required by app images >= 0.0.15, whose
-    # frontend renders /config.json from KEYCLOAK_* env vars the 0.0.25
-    # chart never sets (it mounted the old keycloak-config.json path, so
-    # the image's baked-in dev config won). Bump to stable 0.0.26 when it
-    # ships.
+    # Released chart (the in-repo chart carries an unstamped "set-by-cd"
+    # version that helm rejects — CD stamps it from the chart/vX.Y.Z tag).
+    # Requires the quay-oci ArgoCD repository secret.
+    #
+    # 0.0.26 is the first stable chart that works with app 0.0.15: it renders
+    # a config.json ConfigMap (keycloak + branding) and mounts it at
+    # /usr/share/nginx/html/config.json. 0.0.25 mounted the older
+    # keycloak-config.json path, so the image's baked-in dev config won and
+    # the SPA pointed at the upstream dev Keycloak.
+    #
+    # This release retired three workarounds that the 0.0.26-pr.189
+    # pre-release needed — do not reintroduce them:
+    #   - ravnar.image.tag / frontend.image.tag pins: appVersion is 0.0.15 and
+    #     the parent chart already sets ravnar.image.tag: 0.0.15.
+    #   - frontend.securityContext uid 1000 override: the pr chart defaulted
+    #     to 65532, which crashlooped the uid-1000 stable image. 0.0.26
+    #     defaults to 1000.
     repoURL: oci://quay.io/nebari/charts/nebari-chat
     chart: nebari-chat
-    targetRevision: 0.0.26-pr.189
+    targetRevision: 0.0.26
     helm:
       releaseName: nebari-chat
       values: |
@@ -34,10 +44,9 @@ spec:
         # ravnar subchart: trust the gateway's self-signed cert (httpx
         # honors SSL_CERT_FILE). ConfigMap created out-of-band — see README.
         ravnar:
-          # The pr.189 chart defaults to a pr image; pin the stable release
-          # (drop when a stable chart wrapping these images ships).
-          image:
-            tag: "0.0.15"
+          # No image pin — the 0.0.26 chart already sets
+          # ravnar.image.tag: 0.0.15 (quay.io/nebari/nebari-chat-backend).
+          #
           # Stable DB password from an out-of-band secret (see README). The
           # chart's lookup()-based reuse of its generated secret doesn't work
           # under ArgoCD (helm template has no cluster access), so the
@@ -129,18 +138,8 @@ spec:
             hostname: chat-api.nebari.local
 
         frontend:
-          image:
-            tag: "0.0.15"
-          # The pr.189 chart defaults to uid 65532, but the stable 0.0.15
-          # image still runs as uid 1000 (/tmp/nginx and config.json are
-          # 1000-owned, so 65532 crashloops on "permission denied"). Drop
-          # when chart+image releases align again.
-          securityContext:
-            pod:
-              runAsUser: 1000
-              runAsGroup: 1000
-              fsGroup: 1000
-              runAsNonRoot: true
+          # No image pin and no securityContext override — the chart's
+          # appVersion (0.0.15) and its uid-1000 defaults are already correct.
           keycloak:
             # Browser-facing auth server URL
             authServerUrl: "https://keycloak.nebari.local"
@@ -152,6 +151,16 @@ spec:
           # primary/secondary set): camelCase keys are kebab-cased into CSS
           # custom properties, so bgBrandDefault -> --bg-brand-default. See
           # frontend/src/main.css for the full token list.
+          #
+          # !! A BRANDING-ONLY EDIT NEEDS A MANUAL RESTART. 0.0.26 delivers
+          # these through a ConfigMap mounted with subPath (kubelet never
+          # updates a subPath mount in place) and the Deployment carries no
+          # checksum/config annotation, so ArgoCD reports Synced/Healthy while
+          # nginx keeps serving the old colors. Same trap as the landing page:
+          #   kubectl rollout restart deploy/nebari-chat-frontend -n nebari-chat
+          # The 0.0.26-pr.189 chart passed these as env vars, which rolled the
+          # pod automatically — that convenience is gone. Worth an upstream
+          # checksum/config annotation.
           branding:
             theme:
               light:
