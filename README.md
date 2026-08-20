@@ -93,7 +93,7 @@ NIC-owned apps; `nebari-apps` allows any source repo and any namespace:
 | Provenance Collector | https://provenance.nebari.local | Daily scan at 06:00; http persistence mode |
 | Apps | https://apps.nebari.local | Launch static/pixi web apps (UI + API + MCP at /mcp); apps serve at `<name>.apps.nebari.local` |
 | Harbor | https://harbor.nebari.local | OCI registry + Trivy scanning; "LOGIN VIA OIDC PROVIDER" (Keycloak) or `admin` with the harbor-admin secret |
-| Frames | https://frames.nebari.local | Context Frames registry + remote MCP endpoint. Chart `0.1.6` and image `v0.1.6`, but the chart is **vendored** at `gitops/charts/nebari-frames` — upstream still has no CA-injection hook, so the local `orgCABundle` addition lives there (see [Deliberate version skew](#deliberate-version-skew)) |
+| Frames | https://frames.nebari.local | Context Frames registry + remote MCP endpoint. Chart `0.1.7` and image `v0.1.7`, but the chart is **vendored** at `gitops/charts/nebari-frames` — upstream still has no CA-injection hook, so the local `orgCABundle` addition lives there (see [Deliberate version skew](#deliberate-version-skew)) |
 | LLM Serving | https://llm-keys.nebari.local | llm-d operator + API-key manager UI. **No GPUs** here, so GPU `LLMModel` CRs won't schedule (default serving image is CUDA-only). Chart `0.1.4`, with operator, key-manager and frontend images digest-pinned to `sha-a8e74a3` — the same release commit (see [Deliberate version skew](#deliberate-version-skew)). Prereqs installed alongside: Envoy AI Gateway v0.5.0 + GIE v1.5.0 CRDs, and the foundational envoy-gateway app carries AI-extension wiring |
 | ↳ CPU models | https://llm.nebari.local | Two CPU models (`gitops/manifests/llm-models/`) on llama.cpp's multi-arch server image — `gpu.count: 0` + `serving.command` override (`sh -c` swallows the operator's vLLM args). All models share `llm.nebari.local`, routed by the `model` field in the request body |
 
@@ -319,13 +319,14 @@ or a release carries the fix:
   `latest`. Read published charts, not the git tree, when reasoning about
   defaults.
 
-- **`frames-pack`** is no longer version-skewed — chart `0.1.6` and image
-  `v0.1.6` are the same release (both are commit `84cdd83`, which carries
-  runtime branding and the header rebuild). It stays listed here because the
-  chart is still **vendored** rather than pulled from the repo: upstream 0.1.6
-  has no `extraEnv`, `extraVolumes` or CA-bundle hook, and the backend fails
-  fast fetching OIDC discovery from `https://keycloak.nebari.local` without
-  one. The `orgCABundle` addition is the *only* local delta.
+- **`frames-pack`** is no longer version-skewed — chart `0.1.7` and image
+  `v0.1.7` are the same release (both are commit `3dd1659`, which adds the
+  revamped frame authoring flow on top of 0.1.6's runtime branding and header
+  rebuild). It stays listed here because the chart is still **vendored** rather
+  than pulled from the repo: upstream 0.1.7 has no `extraEnv`, `extraVolumes`
+  or CA-bundle hook, and the backend fails fast fetching OIDC discovery from
+  `https://keycloak.nebari.local` without one. The `orgCABundle` addition is
+  the *only* local delta.
 
   To re-vendor on the next release — pull the **published** chart, not git; CI
   stamps `version`/`appVersion` at release time, so the in-repo `Chart.yaml`

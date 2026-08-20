@@ -10,14 +10,15 @@ metadata:
 spec:
   project: nebari-apps
 
-  # Vendored copy of the PUBLISHED nebari-frames 0.1.6 chart — no longer
-  # tracking main. 0.1.6 is the release of 84cdd83, so branding (#56) and the
-  # header rebuild are both in it.
+  # Vendored copy of the PUBLISHED nebari-frames 0.1.7 chart — no longer
+  # tracking main. 0.1.7 is the release of 3dd1659; it adds the revamped frame
+  # authoring flow (#58) on top of 0.1.6's branding and header rebuild.
   #
   # Still vendored for one reason only: orgCABundle support. The backend fails
   # fast fetching OIDC discovery from https://keycloak.nebari.local and the
   # upstream chart still has no way to inject the gateway CA (re-checked
-  # against 0.1.6 — no extraEnv, extraVolumes or caBundle hook). Drop the
+  # against 0.1.7 — no extraEnv, extraVolumes or caBundle hook; the 0.1.6 ->
+  # 0.1.7 chart diff is the version bump and nothing else). Drop the
   # vendored copy the moment upstream grows one; re-vendor with
   #   helm pull nebari/nebari-frames --version <v> --untar
   # and re-apply the orgCABundle delta (values.yaml + templates/deployment.yaml).
@@ -32,16 +33,14 @@ spec:
       values: |
         image:
           # amd64-only image pinned by digest for the arm64 kind node (Rosetta).
-          # Now the release tag rather than a sha- build, matching the chart's
-          # appVersion. Same source as the previous sha-84cdd83 pin — v0.1.6 IS
-          # 84cdd83 — but the tag push produced its own build, hence a different
-          # digest.
+          # Release tag rather than a sha- build, matching the chart's
+          # appVersion.
           #
           # Keep chart and image on the same release: the SPA is embedded in the
-          # Go binary, so every web change (header, nav, branding applier) ships
-          # in this image and nowhere else. A UI change that doesn't appear is
-          # almost always a stale image pin.
-          tag: "v0.1.6@sha256:2fb5543c81927eb43446a2e27493d01657d75603ca1b0ac9ec6aa133e83e67b5"
+          # Go binary, so every web change (header, nav, branding applier, the
+          # 0.1.7 authoring revamp) ships in this image and nowhere else. A UI
+          # change that doesn't appear is almost always a stale image pin.
+          tag: "v0.1.7@sha256:094e71d29f8569b12a2823e47f0aa6793c65e5579f43fc8eb0e6b0ea4b49cc2a"
 
         # Deep Blue & Teal palette, shared with the landing / chat / provenance /
         # llm-serving / apps packs. Rendered into a ConfigMap and served by the
