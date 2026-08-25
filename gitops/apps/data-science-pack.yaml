@@ -97,22 +97,6 @@ spec:
             image:
               name: quay.io/nebari/nebari-data-science-pack-jupyterlab
               tag: sha-5dfee5e
-            # The main-branch image config hardcodes
-            # NEBI_STORAGE_WORKSPACES_DIR=/var/lib/nebi/workspaces. On main
-            # the chart's pre-spawn hook mounts a per-user PVC there, but the
-            # feat/user-shared-volumes chart deployed here predates that hook,
-            # so without a mount `nebi serve` dies with "mkdir /var/lib/nebi:
-            # permission denied". emptyDir is enough locally: nebi's DB (the
-            # durable state) lives on the home PVC; workspaces are just
-            # materialized pixi envs that rebuild on demand. Goes away when
-            # the chart moves back to main / the feature branch merges.
-            storage:
-              extraVolumes:
-                - name: nebi-workspaces
-                  emptyDir: {}
-              extraVolumeMounts:
-                - name: nebi-workspaces
-                  mountPath: /var/lib/nebi
             networkPolicy:
               egress:
                 - to:
@@ -213,6 +197,28 @@ spec:
                     "accent_color": "#3B82F6",
                     "accent_color_dark": "#60A5FA",
                 }
+              # The sha-5dfee5e image config hardcodes
+              # NEBI_STORAGE_WORKSPACES_DIR=/var/lib/nebi/workspaces. On main
+              # the chart's pre-spawn hook mounts a per-user PVC there, but the
+              # feat/user-shared-volumes chart deployed here predates that
+              # hook, so without a mount `nebi serve` dies with "mkdir
+              # /var/lib/nebi: permission denied" and the Nebi tile 504s
+              # ("upstream request timeout"). singleuser.storage.extraVolumes
+              # does NOT work: the pack's 01-spawner.py hard-assigns
+              # c.KubeSpawner.volumes/volume_mounts, clobbering z2jh's
+              # storage-derived config. extraConfig execs after config.d (same
+              # trick as the branding block above), so appends here stick.
+              # emptyDir is enough locally: nebi's DB (the durable state)
+              # lives on the home PVC; workspaces are just materialized pixi
+              # envs that rebuild on demand. Goes away when the chart moves
+              # back to main / the feature branch merges.
+              02-nebi-workspaces: |
+                c.KubeSpawner.volumes.append(
+                    {"name": "nebi-workspaces", "emptyDir": {}}
+                )
+                c.KubeSpawner.volume_mounts.append(
+                    {"name": "nebi-workspaces", "mountPath": "/var/lib/nebi"}
+                )
 
   destination:
     server: https://kubernetes.default.svc
