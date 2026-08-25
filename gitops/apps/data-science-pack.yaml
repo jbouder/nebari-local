@@ -97,6 +97,22 @@ spec:
             image:
               name: quay.io/nebari/nebari-data-science-pack-jupyterlab
               tag: sha-5dfee5e
+            # The main-branch image config hardcodes
+            # NEBI_STORAGE_WORKSPACES_DIR=/var/lib/nebi/workspaces. On main
+            # the chart's pre-spawn hook mounts a per-user PVC there, but the
+            # feat/user-shared-volumes chart deployed here predates that hook,
+            # so without a mount `nebi serve` dies with "mkdir /var/lib/nebi:
+            # permission denied". emptyDir is enough locally: nebi's DB (the
+            # durable state) lives on the home PVC; workspaces are just
+            # materialized pixi envs that rebuild on demand. Goes away when
+            # the chart moves back to main / the feature branch merges.
+            storage:
+              extraVolumes:
+                - name: nebi-workspaces
+                  emptyDir: {}
+              extraVolumeMounts:
+                - name: nebi-workspaces
+                  mountPath: /var/lib/nebi
             networkPolicy:
               egress:
                 - to:
