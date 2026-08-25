@@ -86,9 +86,17 @@ spec:
                   pinned: true
                   thumbnail: "https://raw.githubusercontent.com/nebari-dev/nebi/6b6cef63c67dafd7444f1a3940a0ef8f1dcebb31/assets/nebi-icon.png"
           singleuser:
+            # Singleuser image from the pack's main branch, not the pinned
+            # chart revision: the embedded-Nebi jupyter-server-proxy config
+            # needs the request_headers_override fix (#197/#199) that forces
+            # loopback Host/Origin headers to the local `nebi serve` backend.
+            # Without it, nebi's local-mode netguard 403s every request
+            # ("Forbidden: local mode only accepts requests addressed to a
+            # local host") because the proxy forwards hub.nebari.local
+            # headers. Nebi stays in local mode; only the headers change.
             image:
               name: quay.io/nebari/nebari-data-science-pack-jupyterlab
-              tag: sha-1401182
+              tag: sha-5dfee5e
             networkPolicy:
               egress:
                 - to:
@@ -113,8 +121,9 @@ spec:
             # the themes submodule, and install_jhub_apps(c, spawner_to_subclass=…)
             # all still resolve. Multi-arch (amd64+arm64), so no Rosetta concern.
             #
-            # Known wart: the singleuser image still pins jhub-apps 2025.11.1,
-            # so hub and singleuser are version-skewed. Watch app spawning.
+            # Known wart: the singleuser image (sha-5dfee5e, from main) ships
+            # jhub-apps 2026.8.1 while this hub image carries 2026.7.1, so hub
+            # and singleuser are still mildly version-skewed. Watch app spawning.
             # The real fix is getting feat/user-shared-volumes merged (it holds
             # 32 unmerged commits, including the nebi-envs stale-token fix) so
             # chart and image can come from one revision again.
