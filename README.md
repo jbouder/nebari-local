@@ -94,6 +94,7 @@ NIC-owned apps; `nebari-apps` allows any source repo and any namespace:
 | Apps | https://apps.nebari.local | Launch static/pixi web apps (UI + API + MCP at /mcp); apps serve at `<name>.apps.nebari.local` |
 | Harbor | https://harbor.nebari.local | OCI registry + Trivy scanning; "LOGIN VIA OIDC PROVIDER" (Keycloak) or `admin` with the harbor-admin secret |
 | Frames | https://frames.nebari.local | Context Frames registry + remote MCP endpoint. Chart `0.1.7` and image `v0.1.7`, but the chart is **vendored** at `gitops/charts/nebari-frames` — upstream still has no CA-injection hook, so the local `orgCABundle` addition lives there (see [Deliberate version skew](#deliberate-version-skew)) |
+| Analytics | https://analytics.nebari.local | [nebari-analytics](https://github.com/nebari-dev/nebari-analytics) (Umami 3.4 + builtin postgres). Dashboard behind Keycloak, then Umami's own login (`admin` / `umami` until changed); `/script.js`, `/api/send`, `/api/batch` and `/mcp` are public routes. The repo is private, so ArgoCD needs the `argocd/nebari-analytics-repo` credential that `post-recreate.sh` mints from `gh auth token` |
 | LLM Serving | https://llm-keys.nebari.local | llm-d operator + API-key manager UI. **No GPUs** here, so GPU `LLMModel` CRs won't schedule (default serving image is CUDA-only). Chart `0.1.4`, with operator, key-manager and frontend images digest-pinned to `sha-a8e74a3` — the same release commit (see [Deliberate version skew](#deliberate-version-skew)). Prereqs installed alongside: Envoy AI Gateway v0.5.0 + GIE v1.5.0 CRDs, and the foundational envoy-gateway app carries AI-extension wiring |
 | ↳ CPU models | https://llm.nebari.local | Two CPU models (`gitops/manifests/llm-models/`) on llama.cpp's multi-arch server image — `gpu.count: 0` + `serving.command` override (`sh -c` swallows the operator's vLLM args). All models share `llm.nebari.local`, routed by the `model` field in the request body |
 
@@ -480,6 +481,12 @@ after a cluster recreate** (i.e. re-run the script):
    that populates the metadata ConfigMap; keys minted *through* the UI do
    persist now (#166).
 
+8. **ArgoCD credential for the analytics pack repo** —
+   `nebari-dev/nebari-analytics` is private, so ArgoCD cannot clone it
+   anonymously. The script creates the `argocd/nebari-analytics-repo`
+   repository secret with the token from `gh auth token` (never committed).
+   Without it the `nebari-analytics` app stays in `ComparisonError`.
+
 ArgoCD polls the `file://` repo on an interval; to pick up a new commit
 immediately:
 
@@ -503,7 +510,7 @@ hostname to localhost.
 new names appended whenever a pack is added):
 
 ```bash
-sudo sh -c 'echo "127.0.0.1 nebari.local argocd.nebari.local keycloak.nebari.local hub.nebari.local nebi.nebari.local chat.nebari.local chat-api.nebari.local provenance.nebari.local apps.nebari.local harbor.nebari.local frames.nebari.local llm-keys.nebari.local llm.nebari.local llm-internal.nebari.local" >> /etc/hosts'
+sudo sh -c 'echo "127.0.0.1 nebari.local argocd.nebari.local keycloak.nebari.local hub.nebari.local nebi.nebari.local chat.nebari.local chat-api.nebari.local provenance.nebari.local apps.nebari.local harbor.nebari.local frames.nebari.local llm-keys.nebari.local llm.nebari.local llm-internal.nebari.local analytics.nebari.local" >> /etc/hosts'
 ```
 
 > `/etc/hosts` has no wildcard support, so every app launched through the

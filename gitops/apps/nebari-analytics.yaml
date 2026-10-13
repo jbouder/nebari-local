@@ -1,0 +1,53 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: nebari-analytics
+  namespace: argocd
+  labels:
+    app.kubernetes.io/part-of: nebari-packs
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: nebari-apps
+
+  source:
+    # Private repo: needs the argocd/nebari-analytics-repo credential secret
+    # (created by post-recreate.sh from `gh auth token`; see README).
+    repoURL: https://github.com/nebari-dev/nebari-analytics.git
+    targetRevision: main
+    path: chart
+    helm:
+      releaseName: analytics
+      values: |
+        nebariapp:
+          hostname: analytics.nebari.local
+          # Dashboard = anyone with a Keycloak session (Umami's own login sits
+          # behind the gateway); tracker + collect endpoints are public routes.
+        umami:
+          # Umami's read-only MCP endpoint (API-key auth) at /mcp.
+          mcpEnabled: true
+        # Secrets (APP_SECRET, postgres password) are generated once by the
+        # chart's PreSync Job — nothing out-of-band needed.
+        # Builtin postgres uses the cluster default StorageClass (standard).
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: analytics
+
+  syncPolicy:
+    managedNamespaceMetadata:
+      labels:
+        nebari.dev/managed: "true"
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
