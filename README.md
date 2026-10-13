@@ -585,5 +585,5 @@ ArgoCD's 5-retry budget and leave apps stuck `Failed` even after the CRDs
 arrive — `post-recreate.sh` re-triggers any failed app syncs automatically.
 Expect a handful of apps to stay OutOfSync-but-Healthy permanently
 (gateway-config — the LLM operator live-patches listeners onto the Gateway;
-httproutes; the nebari-chat/nebi-pack postgres StatefulSets; nebari-root):
+httproutes; the nebari-chat/nebi-pack/nebari-analytics postgres StatefulSets; nebari-root):
 this drift is normal here.
