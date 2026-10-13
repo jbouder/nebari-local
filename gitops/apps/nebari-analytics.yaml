@@ -26,6 +26,15 @@ spec:
         umami:
           # Umami's read-only MCP endpoint (API-key auth) at /mcp.
           mcpEnabled: true
+          # One website per instrumented app. Ids are derived from the domain
+          # and published in configmap analytics/analytics-nebari-analytics-websites.
+          websites:
+            - name: Nebari Landing
+              domain: nebari.local
+            - name: Nebari Apps
+              domain: apps.nebari.local
+        # The bootstrap Job rotates admin/umami into the chart secret
+        # (analytics-nebari-analytics-secrets: admin-password, api-key).
         # Secrets (APP_SECRET, postgres password) are generated once by the
         # chart's PreSync Job — nothing out-of-band needed.
         # Builtin postgres uses the cluster default StorageClass (standard).
