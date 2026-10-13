@@ -320,15 +320,21 @@ or a release carries the fix:
   `latest`. Read published charts, not the git tree, when reasoning about
   defaults.
 
-- **`nebari-landingpage`** (TEMPORARY, 2026-10-13) runs the chart **vendored**
-  at `gitops/charts/nebari-landing` plus locally built, `kind load`ed images
-  (`nebari-landing-frontend:analytics-local`, `nebari-landing-webapi:analytics-local`),
-  all from the unpushed `nebari-landing` branch `feat/analytics-tracker`
-  (worktree `~/repos/nebari-landing-analytics`, main + `frontend.analytics`
-  tracker support). This is the analytics-pack proof. Revert
-  `gitops/apps/nebari-landingpage.yaml` to the upstream repo at a release tag
-  once that branch ships; after a cluster recreate the images must be rebuilt
-  and re-loaded (`docker build` in the worktree, then `kind load docker-image`).
+- **`nebari-landingpage`** runs images that are NOT in git: the live
+  Application carries `spec.source.helm.parameters` (set with `kubectl patch`
+  on 2026-09-28) pinning `frontend`/`webapi` to kind-loaded
+  `nebari-landing/{nebari-landing,webapi}:proto-admin*` builds of the
+  `proto/admin-user-management` branch. Helm parameters override values, and
+  ArgoCD's server-side apply leaves that live-owned field alone, so the app
+  reads Synced. Since 2026-10-13 the frontend tag is `proto-admin-analytics`
+  (proto branch + the analytics tracker commit, built from the throwaway
+  worktree `~/repos/nebari-landing-proto-analytics`), and the chart is
+  **vendored** at `gitops/charts/nebari-landing` from the unpushed
+  `nebari-landing` branch `feat/analytics-tracker` (main + `frontend.analytics`
+  support; worktree `~/repos/nebari-landing-analytics`). Revert the app to the
+  upstream repo at a release tag and drop the live parameters once both
+  branches ship. After a cluster recreate rebuild and `kind load` the images
+  and re-apply the parameters.
 
 - **`frames-pack`** is no longer version-skewed — chart `0.1.7` and image
   `v0.1.7` are the same release (both are commit `3dd1659`, which adds the

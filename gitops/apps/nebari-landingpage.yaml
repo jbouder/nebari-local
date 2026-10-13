@@ -17,12 +17,11 @@ spec:
     # TEMPORARY (analytics proof, 2026-10-13): the chart is vendored at
     # gitops/charts/nebari-landing from the UNPUSHED nebari-landing branch
     # feat/analytics-tracker (worktree ~/repos/nebari-landing-analytics,
-    # main + frontend.analytics support), and the frontend/webapi images are
-    # built from that worktree and `kind load`ed as *:analytics-local.
-    # Revert to the upstream repo + a release tag once the branch is merged
-    # and released (see "Deliberate version skew" in the README). Previous
-    # pin: https://github.com/nebari-dev/nebari-landing @ v0.1.5,
-    # path charts/nebari-landing.
+    # main + frontend.analytics support). Images come from the live helm
+    # parameters (see the frontend note below). Revert to the upstream repo
+    # + a release tag once the branch is merged and released (see
+    # "Deliberate version skew" in the README). Previous pin:
+    # https://github.com/nebari-dev/nebari-landing @ v0.1.5, path charts/nebari-landing.
     repoURL: file:///Users/johnnybouder/repos/nebari-local
     targetRevision: main
     path: gitops/charts/nebari-landing
@@ -30,10 +29,12 @@ spec:
       releaseName: nebari-landing
       values: |
         frontend:
-          image:
-            repository: nebari-landing-frontend
-            tag: analytics-local
-            pullPolicy: Never   # kind-loaded local build (see source comment)
+          # NOTE: images are NOT set here. The live Application carries
+          # spec.source.helm.parameters (set with kubectl patch on 2026-09-28)
+          # pinning frontend/webapi to the kind-loaded
+          # nebari-landing/{nebari-landing,webapi}:proto-admin* builds of the
+          # proto/admin-user-management branch; Helm parameters override these
+          # values, and ArgoCD's server-side apply leaves that live field alone.
           # Usage analytics via the analytics pack (gitops/apps/nebari-analytics.yaml).
           # websiteId = nebari-landing.id in configmap analytics/analytics-nebari-analytics-websites.
           analytics:
@@ -85,10 +86,6 @@ spec:
                 ring: "#60A5FA"
 
         webapi:
-          image:
-            repository: nebari-landing-webapi
-            tag: analytics-local
-            pullPolicy: Never   # kind-loaded local build (see source comment)
           keycloak:
             # In-cluster URL for JWK fetching (fast, no TLS hop).
             url: "http://keycloak-keycloakx-http.keycloak.svc.cluster.local:8080"
