@@ -1,0 +1,81 @@
+{{- if .Values.frontend.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "nebari-landing.fullname" . }}-frontend
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "nebari-landing.labels" . | nindent 4 }}
+    app.kubernetes.io/component: frontend
+spec:
+  replicas: {{ .Values.frontend.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "nebari-landing.frontend.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "nebari-landing.labels" . | nindent 8 }}
+        {{- include "nebari-landing.frontend.selectorLabels" . | nindent 8 }}
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 101    # nginx default non-root uid
+        seccompProfile:
+          type: RuntimeDefault
+
+      containers:
+        # ---------------------------------------------------------------
+        # frontend — nginx serves static Vite assets and proxies /api/*
+        # to the webapi ClusterIP. This is the sole external entry point;
+        # Envoy Gateway routes traffic directly here. Auth is handled
+        # client-side by keycloak-js (PKCE/S256) — no sidecar required.
+        # ---------------------------------------------------------------
+        - name: frontend
+          image: "{{ .Values.frontend.image.repository }}:{{ .Values.frontend.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.frontend.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.frontend.port }}
+              protocol: TCP
+          resources:
+            {{- toYaml .Values.frontend.resources | nindent 12 }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          # nginx needs writable /tmp, /var/cache/nginx, and /var/run
+          volumeMounts:
+            - name: nginx-tmp
+              mountPath: /tmp
+            - name: nginx-cache
+              mountPath: /var/cache/nginx
+            - name: nginx-run
+              mountPath: /var/run
+            # Helm-rendered nginx.conf — includes /api/ proxy_pass to the webapi
+            # ClusterIP so the browser never reaches the webapi directly.
+            - name: frontend-config
+              mountPath: /etc/nginx/nginx.conf
+              subPath: nginx.conf
+              readOnly: true
+            # Mounts the Helm-rendered config.json from the ConfigMap, overriding
+            # the placeholder baked into the image at build time.
+            - name: frontend-config
+              mountPath: /usr/share/nginx/html/config.json
+              subPath: config.json
+              readOnly: true
+
+      volumes:
+        - name: nginx-tmp
+          emptyDir: {}
+        - name: nginx-cache
+          emptyDir: {}
+        - name: nginx-run
+          emptyDir: {}
+        - name: frontend-config
+          configMap:
+            name: {{ include "nebari-landing.fullname" . }}-frontend-config
+
+      terminationGracePeriodSeconds: 10
+{{- end }}

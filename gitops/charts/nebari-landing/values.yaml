@@ -1,0 +1,316 @@
+# Default values for nebari-landing.
+
+# -- Global image pull policy applied to all containers.
+global:
+  imagePullPolicy: IfNotPresent
+
+# ---------------------------------------------------------------------------
+# Frontend pod  (static assets served by nginx + /api/* proxy to webapi)
+# Auth is handled client-side by keycloak-js (PKCE/S256). No oauth2-proxy
+# sidecar is required; Envoy Gateway routes directly to the nginx container.
+# ---------------------------------------------------------------------------
+frontend:
+  # Set to false to skip deploying the frontend (e.g. webapi-only test environments
+  # that do not have the oauth2-proxy Secret pre-created).
+  enabled: true
+
+  replicaCount: 1
+
+  image:
+    repository: quay.io/nebari/nebari-landing
+    # Defaults to .Chart.AppVersion when empty. On main that is "latest"
+    # (the floating tag that always points at main's most recent build); on
+    # a release tag it is bumped to the release version (e.g. "0.1.0-alpha.6")
+    # so the chart at that tag pins to a matching image. Override explicitly
+    # to pull a specific PR build or short-SHA tag from Quay.
+    tag: ""
+    pullPolicy: IfNotPresent
+
+  # Port nginx listens on. Must be > 1024 — the container runs as non-root
+  # (UID 101) with all capabilities dropped and cannot bind privileged ports.
+  port: 8080
+
+  # Keycloak connection settings — rendered into /config.json at deploy time
+  # by the frontend ConfigMap. The frontend fetches this file at startup so
+  # the image is config-agnostic (no build-time VITE_* args needed).
+  keycloak:
+    # Full Keycloak base URL (Keycloak 17+ no longer uses /auth as a context root).
+    # e.g. https://keycloak.example.com
+    url: ""
+    realm: "nebari"
+    # OIDC client ID sent by the Keycloak JS adapter in the browser.
+    # Leave empty to use the operator SPA client convention: <namespace>-<nebariapp-name>-spa.
+    # The SPA client is a separate *public* Keycloak client (no secret, PKCE only)
+    # provisioned by the operator when nebariApp.spaClient.enabled=true.
+    # Override only when using a manually provisioned client with a different ID.
+    clientId: ""
+
+  # Branding settings — rendered into /config.json at deploy time.
+  # Leave empty to use the built-in Nebari defaults.
+  branding:
+    # Browser tab title. Leave empty to keep the default ("Nebari | Launchpad").
+    title: ""
+    # URL to a custom logo image displayed in the header.
+    # Leave empty to use the built-in Nebari logo.
+    logoUrl: ""
+    # URL to a custom dark-mode logo image. Leave empty to fall back to
+    # logoUrl / the built-in Nebari logo.
+    logoUrlDark: ""
+    # URL to a custom favicon.
+    # Leave empty to use the built-in Nebari favicon.
+    faviconUrl: ""
+    # CSS variable overrides injected at runtime — no image rebuild required.
+    # Supported tokens: primary, primaryForeground, primaryHover, background,
+    # foreground, secondary, secondaryForeground, muted, mutedForeground,
+    # accent, accentForeground, border, ring, sidebarRing, radius.
+    # primaryHover (button/badge hover + active) and sidebarRing are derived
+    # from primary and ring respectively, so overriding primary is normally
+    # enough — set them only to break that derivation.
+    # Any other key is passed through as-is (camelCase becomes a kebab-cased
+    # CSS custom property); only the tokens above are supported.
+    # Example:
+    #   theme:
+    #     light:
+    #       primary: "#0066cc"
+    #       primaryForeground: "#ffffff"
+    #     dark:
+    #       primary: "#4da6ff"
+    theme:
+      light: {}
+      dark: {}
+    # Optional classification banners (e.g. U.S. government CUI markings)
+    # rendered full-width above the header (top) and below the page content
+    # (bottom). Rendered into /config.json at runtime — no image rebuild.
+    # A banner is disabled while its text is empty. background/foreground
+    # accept CSS color values; when omitted the banner uses the theme's
+    # inverted colors, which follow light/dark mode.
+    # Example:
+    #   banners:
+    #     top:
+    #       text: "CUI"
+    #       background: "#502b85"
+    #       foreground: "#ffffff"
+    #     bottom:
+    #       text: "CUI"
+    banners:
+      top: {}
+      bottom: {}
+
+  # Usage analytics — rendered into /config.json at deploy time. Loads the
+  # Umami tracker from the nebari-analytics pack once a user is signed in;
+  # nothing is injected while scriptUrl or websiteId is empty.
+  analytics:
+    # Tracker script URL, e.g. https://analytics.<domain>/script.js
+    # (the pack publishes it as `tracker-url` in its websites ConfigMap).
+    scriptUrl: ""
+    # Umami website id for this landing page (`nebari-landing.id` in the
+    # pack's websites ConfigMap).
+    websiteId: ""
+    # Collect endpoint origin, only when it differs from the script's origin.
+    hostUrl: ""
+    # Identify the signed-in user to the tracker as a SHA-256 hash of the
+    # Keycloak subject (never the email or username).
+    identify: true
+    # Drop URL query strings from tracked page views.
+    excludeSearch: false
+
+  # Right-sized for static nginx serving the SPA on an idle base install.
+  # Override upward for sustained high traffic, custom nginx modules, or
+  # unusually large/static-heavy frontend deployments.
+  resources:
+    requests:
+      cpu: 10m
+      memory: 32Mi
+    limits:
+      cpu: 100m
+      memory: 64Mi
+
+  service:
+    type: ClusterIP
+    # Must match frontend.port — nginx is now the direct external entry point.
+    port: 8080
+
+# ---------------------------------------------------------------------------
+# Webapi pod  (Go binary — REST API + WebSocket)
+# ---------------------------------------------------------------------------
+webapi:
+  replicaCount: 1
+
+  image:
+    repository: quay.io/nebari/nebari-webapi
+    # Same convention as frontend.image.tag — empty falls back to
+    # .Chart.AppVersion. See the frontend.image.tag comment above for the
+    # full rationale.
+    tag: ""
+    pullPolicy: IfNotPresent
+
+  port: 8080
+
+  # Keycloak JWT validation.
+  keycloak:
+    url: ""           # http://keycloak-keycloakx-http.keycloak.svc:8080
+    realm: "nebari"
+    issuerUrl: ""     # overrides `url` for `iss` claim validation when different
+    enableAuth: true
+    adminGroup: "admin"
+    # Name of a Kubernetes Secret (in keycloak namespace) holding admin creds.
+    # Keys: username / password  (or admin-username / admin-password)
+    adminSecretName: "nebari-realm-admin-credentials"
+    adminSecretNamespace: "keycloak"
+
+  # Comma-separated list of Origins the webapi CORS middleware will accept.
+  # "*" (default) allows all origins — safe because the webapi is ClusterIP-only
+  # and never exposed through the Gateway. Set explicit origins only when running
+  # the Vite dev server directly against a port-forwarded webapi, e.g.:
+  #   allowedOrigins: "http://localhost:5173"
+  allowedOrigins: "*"
+
+  # Enable the GET /api/v1/debug endpoint and verbose JWT logging.
+  # When true, the debug endpoint returns request headers (Bearer tokens redacted),
+  # resolved JWT claims, and per-visibility service counts — useful for diagnosing
+  # auth and proxy-forwarding problems in dev/staging.
+  # NEVER enable in production (it exposes internal auth state).
+  debugMode: false
+
+  # Expose the OpenAPI 3.1 spec at /api/v1/docs/openapi.json and a Scalar
+  # viewer at /api/v1/docs.  When false the routes are not registered and
+  # both paths return 404.  Useful in dev/CI for keeping MSW handlers in
+  # sync with the live API; never enable in production.
+  docsEnabled: false
+
+  healthInterval: 30
+
+  # Automatic platform notifications — require Redis (notifications.enabled implies redis.enabled).
+  notifications:
+    # Post a welcome/feedback notification every time the webapi starts.
+    # Disable if you prefer a clean slate on each restart.
+    startupNotification: true
+    # Auto-post notifications for service lifecycle events:
+    #   - Service added to the landing page (post-startup only)
+    #   - Service removed from the landing page
+    #   - Service recovers from unhealthy → healthy ("back online")
+    lifecycleNotifications: true
+    # How long notifications remain in Redis before expiring.
+    retention: "72h"
+
+  # Right-sized for the Go REST/WebSocket API on an idle base install.
+  # Override upward for sustained high request volume, large service lists,
+  # heavy WebSocket fan-out, or unusually bursty access-request traffic.
+  resources:
+    requests:
+      cpu: 25m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 128Mi
+
+  serviceAccount:
+    create: true
+    name: ""
+    annotations: {}
+
+  service:
+    type: ClusterIP
+    port: 8080
+
+# ---------------------------------------------------------------------------
+# NebariApp CRs  (recommended on a full Nebari / nebari-operator deployment)
+# ---------------------------------------------------------------------------
+# When nebariApp.enabled=true the chart creates a NebariApp custom resource
+# that routes /* to the nginx frontend pod. The nebari-operator reconciles
+# the NebariApp into an HTTPRoute and provisions the SPA PKCE Keycloak client.
+#
+# Set nebariApp.enabled=false (default) for standalone deployments (local dev,
+# CI) where the nebari-operator is not present. The chart will create the
+# HTTPRoute directly via httpRoute.* values instead.
+nebariApp:
+  enabled: false
+
+  # The operator provisions a *public* Keycloak client (PKCE S256) for the
+  # React frontend (keycloak-js). Public clients carry no secret; PKCE is the
+  # OAuth 2.0 BCP recommendation for browser-based apps.
+  # Default client ID: <namespace>-<nebariapp-name>-spa
+  spaClient:
+    enabled: true
+    # Optional override. Leave empty to use the operator convention.
+    clientId: ""
+
+  # Controls whether the landing page registers *itself* as a card on the
+  # landing page.  Usually false — the landing page IS the landing page.
+  landingPage:
+    enabled: false
+    displayName: "Nebari"
+    description: "Nebari platform landing page"
+    icon: "kubernetes"
+    # Optional dark/light theme icon overrides. Must be defined (empty string)
+    # so the nebariapp.yaml template renders "" rather than YAML null — the
+    # NebariApp CRD types these as string and rejects null. The operator falls
+    # back to `icon` when both are empty.
+    iconDark: ""
+    iconLight: ""
+    category: "Platform"
+    priority: 0
+    visibility: "public"
+
+# ---------------------------------------------------------------------------
+# Envoy Gateway HTTPRoute  (used when nebariApp.enabled=false)
+# ---------------------------------------------------------------------------
+# When nebariApp.enabled=true this section is ignored — the operator creates
+# HTTPRoutes from the NebariApp CRs above.  hostname and tls are still read
+# by the NebariApp template so keep them set even when switching modes.
+httpRoute:
+  # Automatically disabled when nebariApp.enabled=true.
+  # Explicitly set to false if you want neither HTTPRoute nor NebariApp CRs.
+  enabled: true
+  # Name of the Gateway to attach to.
+  gatewayName: "envoy-gateway"
+  gatewayNamespace: "envoy-gateway-system"
+  # Hostname the landing page is served on.
+  hostname: "nebari.example.com"
+  # TLS is terminated by the Gateway; set to true when the Gateway listener
+  # uses HTTPS so the route is only matched on the TLS listener.
+  tls: true
+  # Name of a pre-provisioned TLS Secret in the gateway namespace to terminate
+  # TLS with. When set, the operator uses this Secret instead of issuing a
+  # cert through cert-manager — point this at an enterprise-CA-signed wildcard
+  # cert on clusters where the cert-manager selfsigned-issuer flow yields a
+  # browser-untrusted cert. Leave empty to keep the cert-manager behaviour.
+  # Requires nebari-operator >= v0.1.0-alpha.20 (routing.tls.secretName support).
+  tlsSecretName: ""
+
+# ---------------------------------------------------------------------------
+# Redis subchart (bitnami/redis 23.1.1)
+# ---------------------------------------------------------------------------
+redis:
+  enabled: true
+
+  architecture: standalone   # standalone is sufficient; use replication for HA
+
+  auth:
+    enabled: true
+    # Redis 6 ACL username. Empty string means the Redis "default" user, which
+    # is what the Bitnami subchart creates. Set only when using a custom ACL
+    # user provisioned outside the chart.
+    username: ""
+    # Name of an existing secret with key `redis-password`.
+    # When empty, the subchart auto-generates a password.
+    existingSecret: ""
+    existingSecretPasswordKey: "redis-password"
+
+  master:
+    persistence:
+      enabled: true
+      size: 2Gi
+    # Enable AOF persistence for durability.
+    extraFlags:
+      - "--appendonly yes"
+    # Right-sized for the standalone Redis master used by the landing stack.
+    # Override upward for sustained write load, longer notification retention,
+    # large pin/access-request state, or replicated/HA Redis deployments.
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 200m
+        memory: 128Mi

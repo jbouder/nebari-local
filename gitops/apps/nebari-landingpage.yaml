@@ -14,27 +14,31 @@ spec:
   project: foundational
 
   source:
-    repoURL: https://github.com/nebari-dev/nebari-landing
-    # On the v0.1.5 release tag rather than a main commit. v0.1.5 is two
-    # commits past the old 8b7042a pin and carries nebari-landing#200 (hover
-    # and sidebar-ring derived from primary/ring — see the branding note
-    # below), so there is nothing left on main worth floating for.
-    #
-    # This also pins the images: release-prep stamps appVersion "0.1.5" in the
-    # tagged commit, and values.yaml leaves both image tags empty so the
-    # deployments fall back to .Chart.AppVersion. On main appVersion is
-    # "latest", which floated frontend/webapi to main's newest build on every
-    # sync. Reproducible builds are back — keep this on a tag.
-    #
-    # Still requires nebari-operator >= v0.1.0: the chart emits
-    # landingPage.iconDark on its NebariApp CR, which the v0.1.0-alpha.20 CRD
-    # did not declare (see the operator kustomization).
-    targetRevision: v0.1.5
-    path: charts/nebari-landing
+    # TEMPORARY (analytics proof, 2026-10-13): the chart is vendored at
+    # gitops/charts/nebari-landing from the UNPUSHED nebari-landing branch
+    # feat/analytics-tracker (worktree ~/repos/nebari-landing-analytics,
+    # main + frontend.analytics support), and the frontend/webapi images are
+    # built from that worktree and `kind load`ed as *:analytics-local.
+    # Revert to the upstream repo + a release tag once the branch is merged
+    # and released (see "Deliberate version skew" in the README). Previous
+    # pin: https://github.com/nebari-dev/nebari-landing @ v0.1.5,
+    # path charts/nebari-landing.
+    repoURL: file:///Users/johnnybouder/repos/nebari-local
+    targetRevision: main
+    path: gitops/charts/nebari-landing
     helm:
       releaseName: nebari-landing
       values: |
         frontend:
+          image:
+            repository: nebari-landing-frontend
+            tag: analytics-local
+            pullPolicy: Never   # kind-loaded local build (see source comment)
+          # Usage analytics via the analytics pack (gitops/apps/nebari-analytics.yaml).
+          # websiteId = nebari-landing.id in configmap analytics/analytics-nebari-analytics-websites.
+          analytics:
+            scriptUrl: https://analytics.nebari.local/script.js
+            websiteId: 0f874c31-73fd-5d60-834b-70701f531325
           keycloak:
             # External public Keycloak URL - used by the browser for OIDC login.
             url: "https://keycloak.nebari.local"
@@ -81,6 +85,10 @@ spec:
                 ring: "#60A5FA"
 
         webapi:
+          image:
+            repository: nebari-landing-webapi
+            tag: analytics-local
+            pullPolicy: Never   # kind-loaded local build (see source comment)
           keycloak:
             # In-cluster URL for JWK fetching (fast, no TLS hop).
             url: "http://keycloak-keycloakx-http.keycloak.svc.cluster.local:8080"

@@ -1,0 +1,27 @@
+Nebari Landing Page has been deployed!
+
+Components:
+  • frontend  ({{ .Values.frontend.replicaCount }} replica(s)) — nginx serving static assets, proxying /api/* to webapi
+  • webapi    ({{ .Values.webapi.replicaCount }} replica(s)) — REST API + WebSocket hub
+  • redis     (Bitnami subchart {{ .Chart.Dependencies | first | printf "%s" }}) — shared state store
+
+Auth: keycloak-js PKCE/S256 in the browser; JWT validation in the Go webapi.
+      No oauth2-proxy sidecar — the nginx container is the sole external entry point.
+
+{{- if .Values.httpRoute.enabled }}
+
+Traffic routing (Envoy Gateway HTTPRoute):
+  URL: {{ if .Values.httpRoute.tls }}https{{ else }}http{{ end }}://{{ .Values.httpRoute.hostname }}/
+
+  /api/*  → webapi Service  (JWT auth enforced in the Go handler)
+  /*      → frontend Service (nginx → static assets; keycloak-js handles OIDC in the browser)
+{{- end }}
+
+Pre-requisites to verify before using:
+  1. Keycloak OIDC client in realm {{ .Values.webapi.keycloak.realm }}:
+     • Public SPA (keycloak-js PKCE): "{{ default (printf "%s-%s-spa" .Release.Namespace (include "nebari-landing.fullname" .)) .Values.frontend.keycloak.clientId }}"
+       redirect URI: {{ if .Values.httpRoute.tls }}https{{ else }}http{{ end }}://{{ .Values.httpRoute.hostname }}/*
+     Auto-provisioned by the nebari-operator when nebariApp.enabled=true (spaClient.enabled=true).
+
+  2. Keycloak admin secret "{{ .Values.webapi.keycloak.adminSecretName }}" exists in
+     namespace "{{ .Values.webapi.keycloak.adminSecretNamespace }}" with keys: username, password

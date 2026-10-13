@@ -320,6 +320,16 @@ or a release carries the fix:
   `latest`. Read published charts, not the git tree, when reasoning about
   defaults.
 
+- **`nebari-landingpage`** (TEMPORARY, 2026-10-13) runs the chart **vendored**
+  at `gitops/charts/nebari-landing` plus locally built, `kind load`ed images
+  (`nebari-landing-frontend:analytics-local`, `nebari-landing-webapi:analytics-local`),
+  all from the unpushed `nebari-landing` branch `feat/analytics-tracker`
+  (worktree `~/repos/nebari-landing-analytics`, main + `frontend.analytics`
+  tracker support). This is the analytics-pack proof. Revert
+  `gitops/apps/nebari-landingpage.yaml` to the upstream repo at a release tag
+  once that branch ships; after a cluster recreate the images must be rebuilt
+  and re-loaded (`docker build` in the worktree, then `kind load docker-image`).
+
 - **`frames-pack`** is no longer version-skewed — chart `0.1.7` and image
   `v0.1.7` are the same release (both are commit `3dd1659`, which adds the
   revamped frame authoring flow on top of 0.1.6's runtime branding and header
