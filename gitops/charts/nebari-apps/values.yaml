@@ -141,7 +141,7 @@ ui:
 
   # Usage analytics - rendered into /config.json next to the branding and
   # applied by the UI after sign-in. Loads the Umami tracker from the
-  # nebari-analytics pack; nothing is injected while scriptUrl or websiteId
+  # analytics pack; nothing is injected while scriptUrl or websiteId
   # is empty.
   analytics:
     # Tracker script URL, e.g. https://analytics.<domain>/script.js

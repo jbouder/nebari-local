@@ -97,7 +97,7 @@ frontend:
       bottom: {}
 
   # Usage analytics — rendered into /config.json at deploy time. Loads the
-  # Umami tracker from the nebari-analytics pack once a user is signed in;
+  # Umami tracker from the analytics pack once a user is signed in;
   # nothing is injected while scriptUrl or websiteId is empty.
   analytics:
     # Tracker script URL, e.g. https://analytics.<domain>/script.js

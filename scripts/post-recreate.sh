@@ -99,21 +99,21 @@ $KUBECTL -n nebari-chat create secret generic nebari-chat-postgres-password \
   --from-literal=password="$(openssl rand -hex 16)" 2>/dev/null \
   && echo "  created nebari-chat/nebari-chat-postgres-password" || echo "  nebari-chat/nebari-chat-postgres-password exists"
 
-# ArgoCD credential for the private nebari-dev/nebari-analytics repo (the
+# ArgoCD credential for the private nebari-dev/analytics-pack repo (the
 # analytics pack). Reads the token from the gh CLI at run time; nothing is
 # committed. Replace with a public repo / published chart when available.
-if $KUBECTL -n argocd get secret nebari-analytics-repo >/dev/null 2>&1; then
-  echo "  argocd/nebari-analytics-repo exists"
+if $KUBECTL -n argocd get secret analytics-pack-repo >/dev/null 2>&1; then
+  echo "  argocd/analytics-pack-repo exists"
 elif tok=$(gh auth token 2>/dev/null) && [ -n "$tok" ]; then
-  $KUBECTL -n argocd create secret generic nebari-analytics-repo \
+  $KUBECTL -n argocd create secret generic analytics-pack-repo \
     --from-literal=type=git \
-    --from-literal=url=https://github.com/nebari-dev/nebari-analytics.git \
+    --from-literal=url=https://github.com/nebari-dev/analytics-pack.git \
     --from-literal=username=x-access-token \
     --from-literal=password="$tok"
-  $KUBECTL -n argocd label secret nebari-analytics-repo argocd.argoproj.io/secret-type=repository
-  echo "  created argocd/nebari-analytics-repo (from gh auth token)"
+  $KUBECTL -n argocd label secret analytics-pack-repo argocd.argoproj.io/secret-type=repository
+  echo "  created argocd/analytics-pack-repo (from gh auth token)"
 else
-  echo "  WARNING: gh CLI not logged in; argocd/nebari-analytics-repo not created (analytics pack will not sync)"
+  echo "  WARNING: gh CLI not logged in; argocd/analytics-pack-repo not created (analytics pack will not sync)"
 fi
 
 kick_failed_apps

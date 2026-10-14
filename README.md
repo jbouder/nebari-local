@@ -94,7 +94,7 @@ NIC-owned apps; `nebari-apps` allows any source repo and any namespace:
 | Apps | https://apps.nebari.local | Launch static/pixi web apps (UI + API + MCP at /mcp); apps serve at `<name>.apps.nebari.local` |
 | Harbor | https://harbor.nebari.local | OCI registry + Trivy scanning; "LOGIN VIA OIDC PROVIDER" (Keycloak) or `admin` with the harbor-admin secret |
 | Frames | https://frames.nebari.local | Context Frames registry + remote MCP endpoint. Chart `0.1.7` and image `v0.1.7`, but the chart is **vendored** at `gitops/charts/nebari-frames` — upstream still has no CA-injection hook, so the local `orgCABundle` addition lives there (see [Deliberate version skew](#deliberate-version-skew)) |
-| Analytics | https://analytics.nebari.local | [nebari-analytics](https://github.com/nebari-dev/nebari-analytics) (Umami 3.4 + builtin postgres). Dashboard behind Keycloak, then Umami's own login (`admin`; password rotated into `analytics/analytics-nebari-analytics-secrets` → `admin-password`, API key → `api-key`); `/script.js`, `/api/send`, `/api/batch` and `/mcp` are public routes. The repo is private, so ArgoCD needs the `argocd/nebari-analytics-repo` credential that `post-recreate.sh` mints from `gh auth token` |
+| Analytics | https://analytics.nebari.local | [analytics-pack](https://github.com/nebari-dev/analytics-pack) (Umami 3.4 + builtin postgres). Dashboard behind Keycloak, then Umami's own login (`admin`; password rotated into `analytics/analytics-pack-secrets` → `admin-password`, API key → `api-key`); `/script.js`, `/api/send`, `/api/batch` and `/mcp` are public routes. The repo is private, so ArgoCD needs the `argocd/analytics-pack-repo` credential that `post-recreate.sh` mints from `gh auth token` |
 | LLM Serving | https://llm-keys.nebari.local | llm-d operator + API-key manager UI. **No GPUs** here, so GPU `LLMModel` CRs won't schedule (default serving image is CUDA-only). Chart `0.1.4`, with operator, key-manager and frontend images digest-pinned to `sha-a8e74a3` — the same release commit (see [Deliberate version skew](#deliberate-version-skew)). Prereqs installed alongside: Envoy AI Gateway v0.5.0 + GIE v1.5.0 CRDs, and the foundational envoy-gateway app carries AI-extension wiring |
 | ↳ CPU models | https://llm.nebari.local | Two CPU models (`gitops/manifests/llm-models/`) on llama.cpp's multi-arch server image — `gpu.count: 0` + `serving.command` override (`sh -c` swallows the operator's vLLM args). All models share `llm.nebari.local`, routed by the `model` field in the request body |
 
@@ -507,10 +507,10 @@ after a cluster recreate** (i.e. re-run the script):
    persist now (#166).
 
 8. **ArgoCD credential for the analytics pack repo** —
-   `nebari-dev/nebari-analytics` is private, so ArgoCD cannot clone it
-   anonymously. The script creates the `argocd/nebari-analytics-repo`
+   `nebari-dev/analytics-pack` is private, so ArgoCD cannot clone it
+   anonymously. The script creates the `argocd/analytics-pack-repo`
    repository secret with the token from `gh auth token` (never committed).
-   Without it the `nebari-analytics` app stays in `ComparisonError`.
+   Without it the `analytics-pack` app stays in `ComparisonError`.
 
 ArgoCD polls the `file://` repo on an interval; to pick up a new commit
 immediately:
@@ -610,5 +610,5 @@ ArgoCD's 5-retry budget and leave apps stuck `Failed` even after the CRDs
 arrive — `post-recreate.sh` re-triggers any failed app syncs automatically.
 Expect a handful of apps to stay OutOfSync-but-Healthy permanently
 (gateway-config — the LLM operator live-patches listeners onto the Gateway;
-httproutes; the nebari-chat/nebi-pack/nebari-analytics postgres StatefulSets; nebari-root):
+httproutes; the nebari-chat/nebi-pack/analytics-pack postgres StatefulSets; nebari-root):
 this drift is normal here.

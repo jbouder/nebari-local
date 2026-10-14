@@ -56,7 +56,7 @@ spec:
             tag: analytics-local
             pullPolicy: Never
           # Usage analytics via the analytics pack; websiteId = nebari-apps.id
-          # in configmap analytics/analytics-nebari-analytics-websites.
+          # in configmap analytics/analytics-pack-websites.
           analytics:
             scriptUrl: https://analytics.nebari.local/script.js
             websiteId: 0b0c9547-d2a8-5271-8cab-de1a6f9341cd

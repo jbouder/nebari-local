@@ -1,7 +1,7 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: nebari-analytics
+  name: analytics-pack
   namespace: argocd
   labels:
     app.kubernetes.io/part-of: nebari-packs
@@ -11,13 +11,13 @@ spec:
   project: nebari-apps
 
   source:
-    # Private repo: needs the argocd/nebari-analytics-repo credential secret
+    # Private repo: needs the argocd/analytics-pack-repo credential secret
     # (created by post-recreate.sh from `gh auth token`; see README).
-    repoURL: https://github.com/nebari-dev/nebari-analytics.git
+    repoURL: https://github.com/nebari-dev/analytics-pack.git
     targetRevision: main
     path: chart
     helm:
-      releaseName: analytics
+      releaseName: analytics-pack
       values: |
         nebariapp:
           hostname: analytics.nebari.local
@@ -27,14 +27,14 @@ spec:
           # Umami's read-only MCP endpoint (API-key auth) at /mcp.
           mcpEnabled: true
           # One website per instrumented app. Ids are derived from the domain
-          # and published in configmap analytics/analytics-nebari-analytics-websites.
+          # and published in configmap analytics/analytics-pack-websites.
           websites:
             - name: Nebari Landing
               domain: nebari.local
             - name: Nebari Apps
               domain: apps.nebari.local
         # The bootstrap Job rotates admin/umami into the chart secret
-        # (analytics-nebari-analytics-secrets: admin-password, api-key).
+        # (analytics-pack-secrets: admin-password, api-key).
         # Secrets (APP_SECRET, postgres password) are generated once by the
         # chart's PreSync Job — nothing out-of-band needed.
         # Builtin postgres uses the cluster default StorageClass (standard).
