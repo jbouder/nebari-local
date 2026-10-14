@@ -336,6 +336,15 @@ or a release carries the fix:
   branches ship. After a cluster recreate rebuild and `kind load` the images
   and re-apply the parameters.
 
+- **`apps-pack`** (TEMPORARY, 2026-10-13) runs the chart **vendored** at
+  `gitops/charts/nebari-apps` plus a locally built, `kind load`ed UI image
+  (`apps-ui:analytics-local`), both from the unpushed `apps-pack` branch
+  `feat/analytics-tracker` (worktree `~/repos/apps-pack-analytics`, main +
+  `ui.analytics` tracker support); operator/api/mcp stay on ghcr `sha-92a564e`.
+  This is the analytics-pack proof. Revert `gitops/apps/apps-pack.yaml` to the
+  upstream repo once that branch ships; after a cluster recreate rebuild and
+  re-load the UI image (`docker build ui/` in the worktree, then `kind load`).
+
 - **`frames-pack`** is no longer version-skewed — chart `0.1.7` and image
   `v0.1.7` are the same release (both are commit `3dd1659`, which adds the
   revamped frame authoring flow on top of 0.1.6's runtime branding and header
