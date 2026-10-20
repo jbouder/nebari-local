@@ -26,23 +26,23 @@ spec:
         # published on ghcr; pin the sha tag of the commit in use instead.
         # Images are multi-arch (amd64+arm64) — no digest workarounds needed.
         #
-        # sha-1cbb175 is "fix(operator): probe the authz sidecar by port number"
-        # (#119, on top of the authz sidecar in #117), head of main 2026-10-20. All
+        # sha-bfd01e1 is "feat(ui): make every page work below 800px and cover
+        # 390px in the axe suite" (#133), head of main 2026-10-20. All
         # five images are kept on one sha so the chart and its components stay
         # consistent.
         operator:
           image:
-            tag: sha-1cbb175
+            tag: sha-bfd01e1
         api:
           image:
-            tag: sha-1cbb175
+            tag: sha-bfd01e1
           # Users may launch apps into this namespace (also the release ns,
           # so ArgoCD creates and labels it).
           allowedNamespaces:
             - apps
         ui:
           image:
-            tag: sha-1cbb175
+            tag: sha-bfd01e1
           # Deep Blue & Teal palette, shared with the landing / chat /
           # llm-serving / provenance packs and the jhub-apps hub theme.
           #
@@ -91,10 +91,10 @@ spec:
                 sidebarRing: "#60A5FA"
         mcp:
           image:
-            tag: sha-1cbb175
+            tag: sha-bfd01e1
         authz:
           image:
-            tag: sha-1cbb175
+            tag: sha-bfd01e1
 
         keycloak:
           # Browser-facing URL (SPA login); the API fetches JWKS via the
