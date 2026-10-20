@@ -11,17 +11,9 @@ spec:
   project: nebari-apps
 
   source:
-    # TEMPORARY (analytics proof, 2026-10-13): chart vendored at
-    # gitops/charts/nebari-apps from the UNPUSHED apps-pack branch
-    # feat/analytics-tracker (worktree ~/repos/apps-pack-analytics, main +
-    # ui.analytics support); the UI image is built from that worktree and
-    # kind-loaded as apps-ui:analytics-local. Revert to the upstream repo
-    # once the branch ships (see "Deliberate version skew" in the README).
-    # Previous source: https://github.com/nebari-dev/apps-pack.git @ main,
-    # path charts/nebari-apps.
-    repoURL: file:///Users/johnnybouder/repos/nebari-local
+    repoURL: https://github.com/nebari-dev/apps-pack.git
     targetRevision: main
-    path: gitops/charts/nebari-apps
+    path: charts/nebari-apps
     helm:
       releaseName: nebari-apps
       values: |
@@ -34,32 +26,22 @@ spec:
         # published on ghcr; pin the sha tag of the commit in use instead.
         # Images are multi-arch (amd64+arm64) — no digest workarounds needed.
         #
-        # sha-92a564e is "feat: support runtime branding configs for the
-        # apps-ui" (#6) — the commit that added ui.branding below. All four
-        # images are kept on one sha so the chart and its components stay
-        # consistent.
+        # sha-72594dd is "ci: one job per component, build each image once, drop
+        # project-status" (#112), the head of main on 2026-10-20. All four images
+        # are kept on one sha so the chart and its components stay consistent.
         operator:
           image:
-            tag: sha-92a564e
+            tag: sha-72594dd
         api:
           image:
-            tag: sha-92a564e
+            tag: sha-72594dd
           # Users may launch apps into this namespace (also the release ns,
           # so ArgoCD creates and labels it).
           allowedNamespaces:
             - apps
         ui:
           image:
-            # Local build of apps-pack feat/analytics-tracker (see source
-            # comment); previously ghcr sha-92a564e like the other components.
-            repository: apps-ui
-            tag: analytics-local
-            pullPolicy: Never
-          # Usage analytics via the analytics pack; websiteId = nebari-apps.id
-          # in configmap analytics/analytics-pack-websites.
-          analytics:
-            scriptUrl: https://analytics.nebari.local/script.js
-            websiteId: 0b0c9547-d2a8-5271-8cab-de1a6f9341cd
+            tag: sha-72594dd
           # Deep Blue & Teal palette, shared with the landing / chat /
           # llm-serving / provenance packs and the jhub-apps hub theme.
           #
@@ -108,7 +90,7 @@ spec:
                 sidebarRing: "#60A5FA"
         mcp:
           image:
-            tag: sha-92a564e
+            tag: sha-72594dd
 
         keycloak:
           # Browser-facing URL (SPA login); the API fetches JWKS via the
