@@ -35,11 +35,6 @@ spec:
           # nebari-landing/{nebari-landing,webapi}:proto-admin* builds of the
           # proto/admin-user-management branch; Helm parameters override these
           # values, and ArgoCD's server-side apply leaves that live field alone.
-          # Usage analytics via the analytics pack (gitops/apps/analytics-pack.yaml).
-          # websiteId = nebari-landing.id in configmap analytics/analytics-pack-websites.
-          analytics:
-            scriptUrl: https://analytics.nebari.local/script.js
-            websiteId: 0f874c31-73fd-5d60-834b-70701f531325
           keycloak:
             # External public Keycloak URL - used by the browser for OIDC login.
             url: "https://keycloak.nebari.local"
