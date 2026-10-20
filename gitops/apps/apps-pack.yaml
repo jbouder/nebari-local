@@ -26,22 +26,23 @@ spec:
         # published on ghcr; pin the sha tag of the commit in use instead.
         # Images are multi-arch (amd64+arm64) — no digest workarounds needed.
         #
-        # sha-72594dd is "ci: one job per component, build each image once, drop
-        # project-status" (#112), the head of main on 2026-10-20. All four images
-        # are kept on one sha so the chart and its components stay consistent.
+        # sha-4aaf9ad is "feat: enforce access.groups and access.users in the app
+        # pod with an authz sidecar" (#117), the head of main on 2026-10-20. All
+        # five images are kept on one sha so the chart and its components stay
+        # consistent.
         operator:
           image:
-            tag: sha-72594dd
+            tag: sha-4aaf9ad
         api:
           image:
-            tag: sha-72594dd
+            tag: sha-4aaf9ad
           # Users may launch apps into this namespace (also the release ns,
           # so ArgoCD creates and labels it).
           allowedNamespaces:
             - apps
         ui:
           image:
-            tag: sha-72594dd
+            tag: sha-4aaf9ad
           # Deep Blue & Teal palette, shared with the landing / chat /
           # llm-serving / provenance packs and the jhub-apps hub theme.
           #
@@ -90,7 +91,10 @@ spec:
                 sidebarRing: "#60A5FA"
         mcp:
           image:
-            tag: sha-72594dd
+            tag: sha-4aaf9ad
+        authz:
+          image:
+            tag: sha-4aaf9ad
 
         keycloak:
           # Browser-facing URL (SPA login); the API fetches JWKS via the
