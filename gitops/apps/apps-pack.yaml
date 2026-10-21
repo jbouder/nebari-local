@@ -26,9 +26,10 @@ spec:
         # published on ghcr; pin the sha tag of the commit in use instead.
         # Images are multi-arch (amd64+arm64) — no digest workarounds needed.
         #
-        # sha-a8b7297 is "feat(ui): drop the namespace from URLs for apps in
-        # the default namespace" (#161, after the apps list at / #160, the
-        # landing-page switch #159, group-only
+        # sha-61fd965 is "feat: show restarts and resource limits on the app
+        # detail page without metrics-server" (#164, after the status polling
+        # fix #162, the search hint removal #163, short app URLs #161, the
+        # apps list at / #160, the landing-page switch #159, group-only
         # access #158, which drops access.users; the launch form layout fix #157, the Settings UI
         # version fix #156, the Settings page #155, async skeletons
         # and page transitions #154, the idle fix #151, scale-to-zero #143,
@@ -53,17 +54,17 @@ spec:
               - ghcr.io/nebari-dev
         operator:
           image:
-            tag: sha-a8b7297
+            tag: sha-61fd965
         api:
           image:
-            tag: sha-a8b7297
+            tag: sha-61fd965
           # Users may launch apps into this namespace (also the release ns,
           # so ArgoCD creates and labels it).
           allowedNamespaces:
             - apps
         ui:
           image:
-            tag: sha-a8b7297
+            tag: sha-61fd965
           # Deep Blue & Teal palette, shared with the landing / chat /
           # llm-serving / provenance packs and the jhub-apps hub theme.
           #
@@ -112,10 +113,10 @@ spec:
                 sidebarRing: "#60A5FA"
         mcp:
           image:
-            tag: sha-a8b7297
+            tag: sha-61fd965
         authz:
           image:
-            tag: sha-a8b7297
+            tag: sha-61fd965
 
         keycloak:
           # Browser-facing URL (SPA login); the API fetches JWKS via the
