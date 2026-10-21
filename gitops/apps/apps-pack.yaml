@@ -26,8 +26,9 @@ spec:
         # published on ghcr; pin the sha tag of the commit in use instead.
         # Images are multi-arch (amd64+arm64) — no digest workarounds needed.
         #
-        # sha-61fd965 is "feat: show restarts and resource limits on the app
-        # detail page without metrics-server" (#164, after the status polling
+        # sha-848a5de is "feat(mcp)!: authenticate MCP clients with standard
+        # MCP OAuth" (#167, after the mcp.orgCABundle chart value #165 and
+        # #164's restarts and resource limits on the detail page, the status polling
         # fix #162, the search hint removal #163, short app URLs #161, the
         # apps list at / #160, the landing-page switch #159, group-only
         # access #158, which drops access.users; the launch form layout fix #157, the Settings UI
@@ -54,17 +55,17 @@ spec:
               - ghcr.io/nebari-dev
         operator:
           image:
-            tag: sha-61fd965
+            tag: sha-848a5de
         api:
           image:
-            tag: sha-61fd965
+            tag: sha-848a5de
           # Users may launch apps into this namespace (also the release ns,
           # so ArgoCD creates and labels it).
           allowedNamespaces:
             - apps
         ui:
           image:
-            tag: sha-61fd965
+            tag: sha-848a5de
           # Deep Blue & Teal palette, shared with the landing / chat /
           # llm-serving / provenance packs and the jhub-apps hub theme.
           #
@@ -113,14 +114,19 @@ spec:
                 sidebarRing: "#60A5FA"
         mcp:
           image:
-            tag: sha-61fd965
-          # authenticate calls https://keycloak.nebari.local from the pod;
-          # trust the local root CA (ConfigMap from scripts/post-recreate.sh).
+            tag: sha-848a5de
+          # apps-mcp fetches JWKS / talks to https://keycloak.nebari.local from
+          # the pod; trust the local root CA (ConfigMap from post-recreate.sh).
           orgCABundle:
             configMapName: nebari-local-ca-bundle
+          # Public PKCE client Claude Code signs in with (MCP OAuth). Not
+          # provisioned by the nebari-operator: created by hand in the realm,
+          # see scripts/post-recreate.sh.
+          oauth:
+            clientId: nebari-apps-mcp
         authz:
           image:
-            tag: sha-61fd965
+            tag: sha-848a5de
 
         keycloak:
           # Browser-facing URL (SPA login); the API fetches JWKS via the

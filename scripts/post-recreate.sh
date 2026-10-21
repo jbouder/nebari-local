@@ -180,6 +180,15 @@ $KC_EXEC create clients -r nebari -s clientId=debug-cli -s enabled=true \
   -s directAccessGrantsEnabled=true -s standardFlowEnabled=false \
   2>/dev/null && echo "  created debug-cli client" || echo "  debug-cli client exists"
 
+# apps-pack MCP OAuth (apps-pack #167): Claude Code signs in with this public
+# PKCE client; the nebari-operator cannot provision loopback redirect URIs.
+$KC_EXEC create clients -r nebari -s clientId=nebari-apps-mcp -s name="Nebari Apps MCP" \
+  -s publicClient=true -s standardFlowEnabled=true \
+  -s directAccessGrantsEnabled=false -s implicitFlowEnabled=false \
+  -s 'redirectUris=["http://localhost:33418/callback"]' \
+  -s 'attributes."pkce.code.challenge.method"=S256' \
+  2>/dev/null && echo "  created nebari-apps-mcp client" || echo "  nebari-apps-mcp client exists"
+
 SCOPE_ID=$($KC_EXEC get client-scopes -r nebari --fields id,name |
   grep -B1 '"name" *: *"frames-audience"' | sed -n 's/.*"id" *: *"\([^"]*\)".*/\1/p')
 if [ -z "$SCOPE_ID" ]; then
