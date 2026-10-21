@@ -26,23 +26,24 @@ spec:
         # published on ghcr; pin the sha tag of the commit in use instead.
         # Images are multi-arch (amd64+arm64) — no digest workarounds needed.
         #
-        # sha-561b3d2 is "feat(ui): make Apps the home page and retire the
-        # dashboard" (#134), head of main 2026-10-21. All
+        # sha-018dc3c is "feat(ui): drop the one-item top nav and refresh the
+        # Apps screenshot" (#137, after the dashboard removal in #134), head of
+        # main 2026-10-21. All
         # five images are kept on one sha so the chart and its components stay
         # consistent.
         operator:
           image:
-            tag: sha-561b3d2
+            tag: sha-018dc3c
         api:
           image:
-            tag: sha-561b3d2
+            tag: sha-018dc3c
           # Users may launch apps into this namespace (also the release ns,
           # so ArgoCD creates and labels it).
           allowedNamespaces:
             - apps
         ui:
           image:
-            tag: sha-561b3d2
+            tag: sha-018dc3c
           # Deep Blue & Teal palette, shared with the landing / chat /
           # llm-serving / provenance packs and the jhub-apps hub theme.
           #
@@ -91,10 +92,10 @@ spec:
                 sidebarRing: "#60A5FA"
         mcp:
           image:
-            tag: sha-561b3d2
+            tag: sha-018dc3c
         authz:
           image:
-            tag: sha-561b3d2
+            tag: sha-018dc3c
 
         keycloak:
           # Browser-facing URL (SPA login); the API fetches JWKS via the
