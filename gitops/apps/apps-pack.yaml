@@ -40,6 +40,13 @@ spec:
         apps:
           idle:
             timeoutMinutes: 30
+          # Container-image Apps may pull only from these GHCR namespaces
+          # (whole path components: ghcr.io/nebari-dev does not admit
+          # ghcr.io/nebari-dev-evil). Public images need no pull secret.
+          image:
+            allowedRegistries:
+              - ghcr.io/jbouder
+              - ghcr.io/nebari-dev
         operator:
           image:
             tag: sha-e8b1cf5
