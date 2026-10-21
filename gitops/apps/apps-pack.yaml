@@ -26,8 +26,9 @@ spec:
         # published on ghcr; pin the sha tag of the commit in use instead.
         # Images are multi-arch (amd64+arm64) — no digest workarounds needed.
         #
-        # sha-39910d6 is "fix(ui): show the UI's own version and build on the
-        # Settings page" (#156, after the Settings page #155, async skeletons
+        # sha-250ba4c is "fix(ui): align the launch form's fields and tidy its
+        # layout" (#157, after the Settings UI version fix #156, the Settings
+        # page #155, async skeletons
         # and page transitions #154, the idle fix #151, scale-to-zero #143,
         # managers #144, secrets #145, image sources #146 and MCP resources
         # #147), head of main 2026-10-21. All
@@ -50,17 +51,17 @@ spec:
               - ghcr.io/nebari-dev
         operator:
           image:
-            tag: sha-39910d6
+            tag: sha-250ba4c
         api:
           image:
-            tag: sha-39910d6
+            tag: sha-250ba4c
           # Users may launch apps into this namespace (also the release ns,
           # so ArgoCD creates and labels it).
           allowedNamespaces:
             - apps
         ui:
           image:
-            tag: sha-39910d6
+            tag: sha-250ba4c
           # Deep Blue & Teal palette, shared with the landing / chat /
           # llm-serving / provenance packs and the jhub-apps hub theme.
           #
@@ -109,10 +110,10 @@ spec:
                 sidebarRing: "#60A5FA"
         mcp:
           image:
-            tag: sha-39910d6
+            tag: sha-250ba4c
         authz:
           image:
-            tag: sha-39910d6
+            tag: sha-250ba4c
 
         keycloak:
           # Browser-facing URL (SPA login); the API fetches JWKS via the
