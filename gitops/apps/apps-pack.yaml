@@ -26,9 +26,10 @@ spec:
         # published on ghcr; pin the sha tag of the commit in use instead.
         # Images are multi-arch (amd64+arm64) — no digest workarounds needed.
         #
-        # sha-a4428f7 is "feat(ui): show skeletons while content loads" (#148,
-        # after scale-to-zero #143, managers #144, secrets #145, image
-        # sources #146 and MCP resources #147), head of main 2026-10-21. All
+        # sha-e8b1cf5 is "fix(operator): keep idle Apps idle while their pods
+        # terminate" (#151, after skeletons #148, scale-to-zero #143, managers
+        # #144, secrets #145, image sources #146 and MCP resources #147), head
+        # of main 2026-10-21. All
         # five images are kept on one sha so the chart and its components stay
         # consistent. The chart follows main, so bump these whenever main's
         # operator flags change: an older operator image crash-loops on flags
@@ -41,17 +42,17 @@ spec:
             timeoutMinutes: 30
         operator:
           image:
-            tag: sha-a4428f7
+            tag: sha-e8b1cf5
         api:
           image:
-            tag: sha-a4428f7
+            tag: sha-e8b1cf5
           # Users may launch apps into this namespace (also the release ns,
           # so ArgoCD creates and labels it).
           allowedNamespaces:
             - apps
         ui:
           image:
-            tag: sha-a4428f7
+            tag: sha-e8b1cf5
           # Deep Blue & Teal palette, shared with the landing / chat /
           # llm-serving / provenance packs and the jhub-apps hub theme.
           #
@@ -100,10 +101,10 @@ spec:
                 sidebarRing: "#60A5FA"
         mcp:
           image:
-            tag: sha-a4428f7
+            tag: sha-e8b1cf5
         authz:
           image:
-            tag: sha-a4428f7
+            tag: sha-e8b1cf5
 
         keycloak:
           # Browser-facing URL (SPA login); the API fetches JWKS via the
