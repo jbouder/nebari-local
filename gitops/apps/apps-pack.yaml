@@ -26,10 +26,11 @@ spec:
         # published on ghcr; pin the sha tag of the commit in use instead.
         # Images are multi-arch (amd64+arm64) — no digest workarounds needed.
         #
-        # sha-e8b1cf5 is "fix(operator): keep idle Apps idle while their pods
-        # terminate" (#151, after skeletons #148, scale-to-zero #143, managers
-        # #144, secrets #145, image sources #146 and MCP resources #147), head
-        # of main 2026-10-21. All
+        # sha-39910d6 is "fix(ui): show the UI's own version and build on the
+        # Settings page" (#156, after the Settings page #155, async skeletons
+        # and page transitions #154, the idle fix #151, scale-to-zero #143,
+        # managers #144, secrets #145, image sources #146 and MCP resources
+        # #147), head of main 2026-10-21. All
         # five images are kept on one sha so the chart and its components stay
         # consistent. The chart follows main, so bump these whenever main's
         # operator flags change: an older operator image crash-loops on flags
@@ -49,17 +50,17 @@ spec:
               - ghcr.io/nebari-dev
         operator:
           image:
-            tag: sha-e8b1cf5
+            tag: sha-39910d6
         api:
           image:
-            tag: sha-e8b1cf5
+            tag: sha-39910d6
           # Users may launch apps into this namespace (also the release ns,
           # so ArgoCD creates and labels it).
           allowedNamespaces:
             - apps
         ui:
           image:
-            tag: sha-e8b1cf5
+            tag: sha-39910d6
           # Deep Blue & Teal palette, shared with the landing / chat /
           # llm-serving / provenance packs and the jhub-apps hub theme.
           #
@@ -108,10 +109,10 @@ spec:
                 sidebarRing: "#60A5FA"
         mcp:
           image:
-            tag: sha-e8b1cf5
+            tag: sha-39910d6
         authz:
           image:
-            tag: sha-e8b1cf5
+            tag: sha-39910d6
 
         keycloak:
           # Browser-facing URL (SPA login); the API fetches JWKS via the
