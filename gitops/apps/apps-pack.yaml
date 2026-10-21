@@ -114,6 +114,10 @@ spec:
         mcp:
           image:
             tag: sha-61fd965
+          # authenticate calls https://keycloak.nebari.local from the pod;
+          # trust the local root CA (ConfigMap from scripts/post-recreate.sh).
+          orgCABundle:
+            configMapName: nebari-local-ca-bundle
         authz:
           image:
             tag: sha-61fd965

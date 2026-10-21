@@ -126,7 +126,7 @@ wait_for 90 10 "nebari-local-root-ca secret" \
 $KUBECTL -n cert-manager get secret nebari-local-root-ca \
   -o jsonpath='{.data.ca\.crt}' | base64 -d > "$WORKDIR/root-ca.pem"
 cat /etc/ssl/cert.pem "$WORKDIR/root-ca.pem" > "$WORKDIR/ca-bundle.crt"
-for ns in nebi nebari-chat frames envoy-gateway-system; do
+for ns in nebi nebari-chat frames apps envoy-gateway-system; do
   $KUBECTL create namespace "$ns" 2>/dev/null || true
   $KUBECTL -n "$ns" create configmap nebari-local-ca-bundle \
     --from-file=ca-bundle.crt="$WORKDIR/ca-bundle.crt" --dry-run=client -o yaml |

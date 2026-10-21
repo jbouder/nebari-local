@@ -413,7 +413,7 @@ after a cluster recreate** (i.e. re-run the script):
    kubectl --context kind-nebari-local -n cert-manager get secret nebari-local-root-ca \
      -o jsonpath='{.data.ca\.crt}' | base64 -d > /tmp/nebari-local-root-ca.pem
    cat /etc/ssl/cert.pem /tmp/nebari-local-root-ca.pem > /tmp/ca-bundle.crt
-   for ns in nebi nebari-chat frames envoy-gateway-system; do
+   for ns in nebi nebari-chat frames apps envoy-gateway-system; do
      kubectl --context kind-nebari-local -n $ns create configmap nebari-local-ca-bundle \
        --from-file=ca-bundle.crt=/tmp/ca-bundle.crt --dry-run=client -o yaml | \
        kubectl --context kind-nebari-local apply --server-side --force-conflicts -f -
@@ -421,7 +421,7 @@ after a cluster recreate** (i.e. re-run the script):
    ```
    (Server-side apply because the bundle is too large for the client-side
    last-applied annotation.) The pack manifests reference the ConfigMap via
-   `orgCABundle` (nebi) and `ravnar.extraEnv/extraVolumes` (chat).
+   `orgCABundle` (nebi), `mcp.orgCABundle` (apps) and `ravnar.extraEnv/extraVolumes` (chat).
 
    **Workstation trust (apollo-desktop, browsers, curl):** trust the same
    root CA once in the macOS System keychain — needs a real terminal for the
