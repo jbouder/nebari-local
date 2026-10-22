@@ -1,0 +1,31 @@
+manager:
+  # NIC's variables go in envOverrides, not env: the chart renders env and
+  # then appends every envOverrides key without de-duplicating, so the same
+  # name in both breaks the server-side apply. As a map, an overlay overrides
+  # one variable by key. The empty env clears the chart's five default
+  # KEYCLOAK_* entries, which would otherwise duplicate the ones below.
+  env: []
+  envOverrides:
+    # Keycloak integration configuration
+    KEYCLOAK_ENABLED: "true"
+    KEYCLOAK_URL: "http://keycloak-keycloakx-http.keycloak.svc.cluster.local:8080"
+    KEYCLOAK_REALM: "nebari"
+    KEYCLOAK_ADMIN_SECRET_NAME: "keycloak-admin-credentials"
+    KEYCLOAK_ADMIN_SECRET_NAMESPACE: "keycloak"
+    TLS_CLUSTER_ISSUER_NAME: "selfsigned-issuer"
+    KEYCLOAK_ISSUER_CONTEXT_PATH: ""
+    KEYCLOAK_EXTERNAL_URL: "https://keycloak.nebari.local"
+  # Carried over from the kustomize deployment patch this cluster ran before
+  # NIC v0.15 (NIC's own default is 10m/64Mi requests, 200m/128Mi limits).
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+rbac:
+  # The admin/editor/viewer ClusterRoles for NebariApps, which the kustomize
+  # install shipped; the chart only renders them when asked.
+  helpers:
+    enabled: true

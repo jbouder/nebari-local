@@ -20,10 +20,13 @@ cluster:
       worker:
         kubernetes.io/os: linux
 
-# This repo doubles as the GitOps repo. NIC bootstraps the foundational
-# app-of-apps manifests into gitops/ and commits them; ArgoCD reads the
-# committed content through the kind mount above.
-git_repository:
-  url: "file:///Users/johnnybouder/repos/nebari-local"
-  branch: main
-  path: "gitops"
+# This repo doubles as the GitOps repo; ArgoCD reads the committed content
+# through the kind mount above. The tree lives under gitops/, which NIC
+# < 0.15 wrote via git_repository.path. NIC >= 0.15's local provider has no
+# subdirectory option and would write at the repo root, so don't run
+# `nic deploy` against this cluster: foundational upgrades are ported to
+# gitops/ by hand (see docs/nic-0.15-upgrade-plan.md).
+repository:
+  local:
+    path: /Users/johnnybouder/repos/nebari-local
+    branch: main

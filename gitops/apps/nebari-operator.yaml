@@ -13,10 +13,19 @@ metadata:
 spec:
   project: foundational
 
-  source:
-    repoURL: file:///Users/johnnybouder/repos/nebari-local
-    targetRevision: main
-    path: gitops/manifests/nebari-operator
+  sources:
+    - chart: nebari-operator
+      repoURL: quay.io/nebari/charts
+      targetRevision: 0.2.0
+      helm:
+        releaseName: nebari-operator
+        valueFiles:
+          - $values/gitops/values/nebari-operator/base.yaml
+          - $values/gitops/values/nebari-operator/overlays/*.yaml
+        ignoreMissingValueFiles: true
+    - repoURL: file:///Users/johnnybouder/repos/nebari-local
+      targetRevision: main
+      ref: values
 
   destination:
     server: https://kubernetes.default.svc
