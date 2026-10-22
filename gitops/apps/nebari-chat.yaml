@@ -35,7 +35,7 @@ spec:
     # stable chart once the stack is released.
     repoURL: oci://quay.io/nebari/charts/nebari-chat
     chart: nebari-chat
-    targetRevision: 0.0.28-pr.219.5f8b149
+    targetRevision: 0.0.28-pr.219.c593596
     helm:
       releaseName: nebari-chat
       values: |
