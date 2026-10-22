@@ -26,7 +26,11 @@ spec:
         # published on ghcr; pin the sha tag of the commit in use instead.
         # Images are multi-arch (amd64+arm64) — no digest workarounds needed.
         #
-        # sha-8fbc0dd is "feat(operator)!: enforce access.groups at the gateway
+        # sha-6338bd9 is "chore(images)!: drop the apps- prefix from image
+        # names" (#169: the chart now defaults to ghcr.io/nebari-dev/apps-pack/
+        # {operator,authz,api,ui,mcp}; older sha tags only exist under the old
+        # apps-* names), after
+        # sha-8fbc0dd "feat(operator)!: enforce access.groups at the gateway
         # with nebari-operator v0.2.0" (#168: restricted Apps' groups are
         # enforced by the gateway, the authz sidecar is passthrough-only, and
         # groups match by full path; needs nebari-operator >= v0.2.0), after
@@ -61,17 +65,17 @@ spec:
               - docker.io/library
         operator:
           image:
-            tag: sha-8fbc0dd
+            tag: sha-6338bd9
         api:
           image:
-            tag: sha-8fbc0dd
+            tag: sha-6338bd9
           # Users may launch apps into this namespace (also the release ns,
           # so ArgoCD creates and labels it).
           allowedNamespaces:
             - apps
         ui:
           image:
-            tag: sha-8fbc0dd
+            tag: sha-6338bd9
           # Deep Blue & Teal palette, shared with the landing / chat /
           # llm-serving / provenance packs and the jhub-apps hub theme.
           #
@@ -120,7 +124,7 @@ spec:
                 sidebarRing: "#60A5FA"
         mcp:
           image:
-            tag: sha-8fbc0dd
+            tag: sha-6338bd9
           # apps-mcp fetches JWKS / talks to https://keycloak.nebari.local from
           # the pod; trust the local root CA (ConfigMap from post-recreate.sh).
           orgCABundle:
@@ -132,7 +136,7 @@ spec:
             clientId: nebari-apps-mcp
         authz:
           image:
-            tag: sha-8fbc0dd
+            tag: sha-6338bd9
 
         keycloak:
           # Browser-facing URL (SPA login); the API fetches JWKS via the
