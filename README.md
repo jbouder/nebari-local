@@ -344,9 +344,12 @@ or a release carries the fix:
   `nebari-landing` branch `feat/analytics-tracker` (main + `frontend.analytics`
   support; worktree `~/repos/nebari-landing-analytics`). The tracker itself is
   not configured since 2026-10-20 (no `frontend.analytics` values, so nothing is
-  injected). Revert the app to the
-  upstream repo at a release tag and drop the live parameters once both
-  branches ship. After a cluster recreate rebuild and `kind load` the images
+  injected). Since 2026-10-22 the webapi tag is `proto-admin-groups` (proto
+  branch + the full-path `groups` claim fix from nebari-landing#221, needed
+  with nebari-operator 0.2.0; throwaway worktree
+  `~/repos/nebari-landing-proto-groups`, branch `tmp/proto-admin-groups`).
+  Revert the app to the upstream repo at a release tag and drop the live
+  parameters once these branches ship. After a cluster recreate rebuild and `kind load` the images
   and re-apply the parameters.
 
 - **`frames-pack`** is no longer version-skewed — chart `0.1.7` and image
