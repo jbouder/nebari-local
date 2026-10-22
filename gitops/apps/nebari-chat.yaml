@@ -27,9 +27,15 @@ spec:
     #   - frontend.securityContext uid 1000 override: the pr chart defaulted
     #     to 65532, which crashlooped the uid-1000 stable image. 0.0.26
     #     defaults to 1000.
+    #
+    # Currently on the nebari-dev/chat-pack#219 pre-release, the top of the
+    # Nebari design-system UX stack (#214-#219). It pins its own images
+    # (backend and frontend 0.0.17-pr.219.<sha>), runs as uid 1000, and needs
+    # no extra values beyond the existing nebariapp hostnames. Move back to a
+    # stable chart once the stack is released.
     repoURL: oci://quay.io/nebari/charts/nebari-chat
     chart: nebari-chat
-    targetRevision: 0.0.26
+    targetRevision: 0.0.28-pr.219.5f8b149
     helm:
       releaseName: nebari-chat
       values: |
@@ -147,10 +153,13 @@ spec:
           # Deep Blue & Teal palette, shared with the landing / llm-serving /
           # provenance packs and the jhub-apps hub theme.
           #
-          # This chart uses its own brand-token vocabulary (not the shadcn
-          # primary/secondary set): camelCase keys are kebab-cased into CSS
-          # custom properties, so bgBrandDefault -> --bg-brand-default. See
-          # frontend/src/main.css for the full token list.
+          # Two vocabularies, both camelCase keys kebab-cased into CSS custom
+          # properties:
+          #   - Nebari design-system tokens (primary, primaryHover, ring, ...),
+          #     the same set and values as apps-pack. Charts that include
+          #     nebari-dev/chat-pack#214 read only these and ignore the rest.
+          #   - The legacy brand tokens (bgBrandDefault, ...) that 0.0.26 uses
+          #     for its brand color. Drop them once this app moves past 0.0.26.
           #
           # !! A BRANDING-ONLY EDIT NEEDS A MANUAL RESTART. 0.0.26 delivers
           # these through a ConfigMap mounted with subPath (kubelet never
@@ -164,11 +173,33 @@ spec:
           branding:
             theme:
               light:
+                primary: "#1D4ED8"
+                primaryForeground: "#FFFFFF"
+                secondary: "#E6FAF7"
+                secondaryForeground: "#0F766E"
+                accent: "#E8EEFC"
+                accentForeground: "#1E3A8A"
+                ring: "#1D4ED8"
+                primaryHover: "#1E3A8A"
+                sidebarPrimary: "#1D4ED8"
+                sidebarRing: "#1D4ED8"
+                # Legacy (0.0.26)
                 bgBrandDefault: "#1D4ED8"
                 bdBrandDefault: "#1E3A8A"
                 bgBrandSecondary: "#E8EEFC"
                 textBrandOnBrand: "#FFFFFF"
               dark:
+                primary: "#60A5FA"
+                primaryForeground: "#0B1220"
+                secondary: "#16332F"
+                secondaryForeground: "#7FE9DA"
+                accent: "#132039"
+                accentForeground: "#BFD4FE"
+                ring: "#60A5FA"
+                primaryHover: "#93C5FD"
+                sidebarPrimary: "#60A5FA"
+                sidebarRing: "#60A5FA"
+                # Legacy (0.0.26)
                 bgBrandDefault: "#1D4ED8"
                 bdBrandDefault: "#60A5FA"
                 bgBrandSecondary: "#132039"
