@@ -42,6 +42,12 @@ against the existing cluster**: it would write manifests at the repo root.
 - The chart ships the NebariApp CRD as a template with
   `helm.sh/resource-policy: keep`, so ArgoCD adopts the existing CRD and the
   15 NebariApps survive.
+- The `foundational` AppProject lives only in the cluster (NIC derives its
+  `sourceRepos` from the rendered app templates at deploy time), so it has to
+  allow the chart repo out of band:
+  `kubectl -n argocd patch appproject foundational --type json -p '[{"op":"add","path":"/spec/sourceRepos/-","value":"quay.io/nebari/charts"}]'`.
+  Without it the app fails with `InvalidSpecError` and the old operator keeps
+  running.
 - The kustomize install's `Namespace` gets pruned and recreated
   (`CreateNamespace=true`). It only holds the operator. If the app stays
   `OutOfSync`, sync it again.
