@@ -26,8 +26,11 @@ spec:
         # published on ghcr; pin the sha tag of the commit in use instead.
         # Images are multi-arch (amd64+arm64) — no digest workarounds needed.
         #
-        # sha-848a5de is "feat(mcp)!: authenticate MCP clients with standard
-        # MCP OAuth" (#167, after the mcp.orgCABundle chart value #165 and
+        # sha-8fbc0dd is "feat(operator)!: enforce access.groups at the gateway
+        # with nebari-operator v0.2.0" (#168: restricted Apps' groups are
+        # enforced by the gateway, the authz sidecar is passthrough-only, and
+        # groups match by full path; needs nebari-operator >= v0.2.0), after
+        # MCP OAuth for MCP clients #167, the mcp.orgCABundle chart value #165 and
         # #164's restarts and resource limits on the detail page, the status polling
         # fix #162, the search hint removal #163, short app URLs #161, the
         # apps list at / #160, the landing-page switch #159, group-only
@@ -35,7 +38,7 @@ spec:
         # version fix #156, the Settings page #155, async skeletons
         # and page transitions #154, the idle fix #151, scale-to-zero #143,
         # managers #144, secrets #145, image sources #146 and MCP resources
-        # #147), head of main 2026-10-21. All
+        # #147), head of main 2026-10-22. All
         # five images are kept on one sha so the chart and its components stay
         # consistent. The chart follows main, so bump these whenever main's
         # operator flags change: an older operator image crash-loops on flags
@@ -58,17 +61,17 @@ spec:
               - docker.io/library
         operator:
           image:
-            tag: sha-848a5de
+            tag: sha-8fbc0dd
         api:
           image:
-            tag: sha-848a5de
+            tag: sha-8fbc0dd
           # Users may launch apps into this namespace (also the release ns,
           # so ArgoCD creates and labels it).
           allowedNamespaces:
             - apps
         ui:
           image:
-            tag: sha-848a5de
+            tag: sha-8fbc0dd
           # Deep Blue & Teal palette, shared with the landing / chat /
           # llm-serving / provenance packs and the jhub-apps hub theme.
           #
@@ -117,7 +120,7 @@ spec:
                 sidebarRing: "#60A5FA"
         mcp:
           image:
-            tag: sha-848a5de
+            tag: sha-8fbc0dd
           # apps-mcp fetches JWKS / talks to https://keycloak.nebari.local from
           # the pod; trust the local root CA (ConfigMap from post-recreate.sh).
           orgCABundle:
@@ -129,7 +132,7 @@ spec:
             clientId: nebari-apps-mcp
         authz:
           image:
-            tag: sha-848a5de
+            tag: sha-8fbc0dd
 
         keycloak:
           # Browser-facing URL (SPA login); the API fetches JWKS via the
