@@ -30,7 +30,8 @@ fits in roughly 8 CPUs / 16 GB VM memory.
 
 From zero to a browsable cluster (each step is detailed in the sections below):
 
-1. **Install NIC** (>= 0.12.0): `brew install nebari-dev/tap/nic`
+1. **Install NIC** (>= 0.15.0): `brew install nebari-dev/tap/nic`. Check
+   `which nic` resolves to Homebrew's: a stray `/usr/local/bin/nic` shadows it.
 2. **Deploy**: `nic deploy -f nebari-config.yaml` — creates the kind cluster,
    bootstraps ArgoCD, and syncs everything in `gitops/` (foundational apps +
    all software packs).
@@ -65,7 +66,17 @@ From zero to a browsable cluster (each step is detailed in the sections below):
 
 ## Deploy
 
-Requires NIC **>= 0.12.0** (`brew install nebari-dev/tap/nic`).
+Requires NIC **>= 0.15.0** (`brew install nebari-dev/tap/nic`).
+
+> **The running cluster was created by NIC < 0.15 and upgraded in place**
+> (see [docs/nic-0.15-upgrade-plan.md](docs/nic-0.15-upgrade-plan.md)): it
+> still uses MetalLB and the sudo port-forward, and its foundational
+> manifests live under `gitops/`. NIC 0.15's `repository.local` provider has
+> no subdirectory option, so **don't run `nic deploy` against this cluster**.
+> It would write the foundational tree at the repo root. Port foundational
+> upgrades into `gitops/` by hand instead. A fresh v0.15 deploy (which
+> publishes the gateway on `127.0.0.1:443` without MetalLB) needs this repo's
+> layout reworked first.
 
 ```bash
 nic deploy -f nebari-config.yaml
